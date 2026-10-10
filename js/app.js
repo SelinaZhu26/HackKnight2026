@@ -1,0 +1,572 @@
+/* receipts. — app shell, screens and state */
+(function () {
+  const { esc, money } = R;
+  const $ = (s, el = document) => el.querySelector(s);
+  const phone = $('#phone');
+  const LS = 'receipts.state';
+
+  // ---------- state ----------
+  const DEFAULT_SQUADS = [
+    { id: 'nodash', name: 'No-DoorDash November', emoji: '🛵', color: '#ff4fa3', cat: 'Delivery', limit: 100, stakes: 'loser buys the group boba 🧋', members: ['me', 'marcus', 'maya'], code: 'DASH26', streak: 3 },
+    { id: 'beans', name: 'Coffee Cutters', emoji: '☕', color: '#ff7a1a', cat: 'Coffee', limit: 60, stakes: 'loser brews everyone cold brew for a week', members: ['me', 'priya', 'dev', 'jordan'], code: 'BEAN42', streak: 1 },
+    { id: 'tour', name: 'Broke but Booked', emoji: '🎤', color: '#c6ff3d', cat: 'Entertainment', limit: 150, stakes: 'winner picks the next concert', members: ['jordan', 'me', 'priya'], code: 'TOUR88', streak: 5 },
+  ];
+  const PUBLIC_SQUADS = {
+    GYMRAT: { name: 'Gym Rats Who Actually Go', emoji: '🏋️', color: '#2ee59d', cat: 'Subscriptions', limit: 30, stakes: 'cancel one sub or do 50 pushups', members: ['dev', 'maya'] },
+    UBER0: { name: 'Legs Exist', emoji: '🚶', color: '#3d8bff', cat: 'Transport', limit: 80, stakes: 'loser walks everyone to class', members: ['jordan', 'marcus'] },
+  };
+
+  let S = load();
+  function load() {
+    let s = {};
+    try { s = JSON.parse(localStorage.getItem(LS)) || {}; } catch {}
+    return { name: '', onboarded: false, source: 'demo', budget: 1500, csvTxns: null, extraTxns: [], challenge: null, squads: null, feed: null, ...s };
+  }
+  function save() { try { localStorage.setItem(LS, JSON.stringify(S)); } catch {} }
+
+  const DATA = R.generate();
+  let A = {}; // analysis per person id
+  let PEOPLE = [];
+  function recompute() {
+    const mine = [...(S.source === 'csv' && S.csvTxns ? S.csvTxns : DATA.me), ...S.extraTxns];
+    A = {};
+    PEOPLE = R.PEOPLE.map((p) => {
+      const person = p.id === 'me' ? { ...p, name: displayName(), budget: S.budget } : p;
+      const a = R.analyze(p.id === 'me' ? mine : DATA[p.id], { budget: person.budget });
+      A[p.id] = a;
+      return { person, a };
+    });
+    if (!S.squads) S.squads = DEFAULT_SQUADS;
+    if (!S.feed) S.feed = seedFeed();
+  }
+  const displayName = () => S.name.trim() || 'You';
+  const personById = (id) => PEOPLE.find((p) => p.person.id === id);
+  const nameOf = (id) => (id === 'me' ? displayName() : personById(id)?.person.name || id);
+
+  // ---------- helpers ----------
+  let toastT;
+  function toast(msg) {
+    let t = $('.toast', phone);
+    if (!t) { t = document.createElement('div'); t.className = 'toast'; phone.appendChild(t); }
+    t.textContent = msg; t.classList.add('on');
+    clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 2400);
+  }
+  function sheet(html, onMount) {
+    closeSheet();
+    const bd = document.createElement('div'); bd.className = 'backdrop';
+    const sh = document.createElement('div'); sh.className = 'sheet';
+    sh.innerHTML = `<div class="grab"></div>${html}`;
+    phone.append(bd, sh);
+    requestAnimationFrame(() => { bd.classList.add('on'); sh.classList.add('on'); });
+    bd.onclick = closeSheet;
+    if (onMount) onMount(sh);
+    return sh;
+  }
+  function closeSheet() {
+    phone.querySelectorAll('.backdrop, .sheet').forEach((el) => {
+      el.classList.remove('on'); setTimeout(() => el.remove(), 300);
+    });
+  }
+  const avatar = (p, cls = '') => `<div class="avatar ${cls}" style="background:${p.color}">${p.emoji}</div>`;
+  const gradeColor = (g) => ({ A: '#2ee59d', B: '#c6ff3d', C: '#ffd23f', D: '#ff7a1a', F: '#ff4545' }[g]);
+  const b64 = { enc: (o) => btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
+    dec: (s) => JSON.parse(decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))))) };
+  const baseUrl = () => location.href.split('#')[0];
+  async function copy(text) {
+    try { await navigator.clipboard.writeText(text); return true; } catch {
+      const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+      const ok = document.execCommand('copy'); ta.remove(); return ok;
+    }
+  }
+
+  // ---------- routing ----------
+  function route() {
+    const h = location.hash.replace(/^#\/?/, '');
+    const [page, arg] = h.split('/');
+    if (page === 'share' && arg) return renderShare(arg);
+    if (!S.onboarded) {
+      if (page === 'join' && arg) S.pendingJoin = arg;
+      return renderWelcome();
+    }
+    if (page === 'join' && arg) { location.replace('#/squads'); setTimeout(() => joinSquad(arg), 300); return; }
+    renderShell(page || 'home');
+    if (page === 'wrapped') playSolo();
+    if (page === 'friends-wrapped') playFriends();
+  }
+  window.addEventListener('hashchange', route);
+
+  // ---------- welcome / onboarding ----------
+  function renderWelcome() {
+    phone.innerHTML = `<div class="welcome">
+      <div class="shape circle" style="width:300px;height:300px;top:-60px;right:-90px;background:var(--pink);animation:float 7s ease-in-out infinite alternate"></div>
+      <div class="shape star" style="width:64px;height:64px;top:26px;right:170px;background:#0a0a0c;animation:spin 20s linear infinite"></div>
+      <div class="shape ring" style="width:110px;height:110px;top:70px;right:24px;border-width:14px;border-color:var(--purple);animation:float 6s ease-in-out infinite alternate-reverse"></div>
+      <div class="logo" style="position:relative;z-index:1">receipts<i>.</i></div>
+      <h1>your money had a month. let’s talk about it.</h1>
+      <p class="lead">spotify wrapped, but for your bank statement. + friends who keep you accountable.</p>
+      <div class="field" style="position:relative;z-index:1"><input class="input" id="nm" maxlength="18" placeholder="what do we call you?" value="${esc(S.name)}" autocomplete="off"></div>
+      <div class="connect">
+        <button data-act="demo"><span class="em">🏦</span><span><b>Connect bank</b><small>demo account · 3 months of data</small></span></button>
+        <button data-act="gmail" class="secondary"><span class="em">📧</span><span><b>Scan Gmail receipts</b><small>MCP server + Gemini reads your order emails</small></span></button>
+        <button data-act="csv" class="secondary"><span class="em">📄</span><span><b>Upload bank CSV</b><small>Chase, BofA, Capital One, etc.</small></span></button>
+      </div>
+      <input type="file" id="csvfile" accept=".csv,text/csv" hidden>
+      <div class="fine">demo build for hack knight · everything stays in your browser</div>
+    </div>`;
+    const nm = $('#nm', phone);
+    nm.addEventListener('input', () => { S.name = nm.value; save(); });
+    phone.querySelector('[data-act=demo]').onclick = () => finishOnboarding('demo');
+    phone.querySelector('[data-act=gmail]').onclick = () => openGmailScan(true);
+    phone.querySelector('[data-act=csv]').onclick = () => $('#csvfile', phone).click();
+    $('#csvfile', phone).onchange = (e) => handleCSV(e.target.files[0], true);
+  }
+  function finishOnboarding(source) {
+    S.source = source === 'csv' ? 'csv' : 'demo';
+    S.onboarded = true; save(); recompute();
+    const join = S.pendingJoin; delete S.pendingJoin;
+    location.hash = join ? `#/join/${join}` : '#/home';
+    if (!join) setTimeout(playSolo, 350);
+  }
+
+  async function handleCSV(file, fromWelcome) {
+    if (!file) return;
+    try {
+      const txns = R.parseCSV(await file.text());
+      S.csvTxns = txns; S.source = 'csv'; save();
+      toast(`imported ${txns.length} transactions 🧾`);
+      if (fromWelcome) finishOnboarding('csv'); else { recompute(); route(); }
+    } catch (e) { toast('hmm: ' + e.message); }
+  }
+
+  // ---------- Gmail / MCP receipt scan ----------
+  function openGmailScan(fromWelcome) {
+    const sample = DATA.me.filter((t) => !t.recurring).slice(-60).filter((_, i) => i % 6 === 0).slice(0, 7);
+    const subj = { Delivery: 'Your order is on its way', Shopping: 'Your order has shipped', Transport: 'Your trip receipt', Coffee: 'Thanks for your order', Food: 'Order confirmation', Entertainment: 'Your tickets are here', Groceries: 'Your receipt' };
+    sheet(`<h3>📧 scanning your inbox</h3>
+      <p class="sub">An MCP server pulls order &amp; receipt emails from Gmail; Gemini extracts merchant, amount and category from each one.</p>
+      <div class="row muted" style="font-size:14px"><span class="spinner"></span><span id="scanStatus">connecting to gmail via MCP…</span></div>
+      <div class="scan-list" id="scanList"></div>
+      <button class="btn block" id="scanDone" disabled>building your wrapped…</button>
+      <div class="section-h"><h3>try it live</h3><small>${R.gemini.enabled ? 'Gemini connected ✨' : 'add a Gemini key in ⚙️ for AI parsing'}</small></div>
+      <textarea class="input" id="rcpt" placeholder="paste any receipt / order confirmation email here…"></textarea>
+      <div class="row" style="margin-top:10px"><button class="btn sm ghost" id="rcptSample">use sample</button><button class="btn sm" id="rcptGo">parse receipt ✨</button></div>
+      <div id="rcptOut" style="margin-top:12px"></div>`, (sh) => {
+      const list = $('#scanList', sh); const status = $('#scanStatus', sh);
+      let i = 0;
+      const iv = setInterval(() => {
+        if (!sh.isConnected) return clearInterval(iv);
+        if (i < sample.length) {
+          const t = sample[i++];
+          status.textContent = `found ${i * 6 + 3} receipts… parsing with Gemini`;
+          list.insertAdjacentHTML('beforeend', `<div class="scan-item"><span style="font-size:20px">${R.CATEGORIES[t.category].emoji}</span>
+            <div><b>${esc(t.merchant)}</b><small>“${subj[t.category] || 'Receipt'}” · ${new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</small></div><span class="ok">${money(t.amount)} ✓</span></div>`);
+        } else {
+          clearInterval(iv);
+          status.parentElement.innerHTML = `<span style="color:var(--mint);font-weight:800">✓ ${DATA.me.length} transactions across 3 months</span>`;
+          const b = $('#scanDone', sh); b.disabled = false; b.textContent = fromWelcome ? 'see my wrapped →' : 'done';
+          b.onclick = () => { closeSheet(); if (fromWelcome) finishOnboarding('demo'); };
+        }
+      }, 420);
+      $('#rcptSample', sh).onclick = () => {
+        $('#rcpt', sh).value = `From: DoorDash <no-reply@doordash.com>\nSubject: Order Confirmation for ${displayName()} from Chipotle Mexican Grill\n\nThanks for your order! Your Dasher is on the way.\n1x Burrito Bowl (double chicken)  $14.25\n1x Chips & Guac  $5.10\nDelivery Fee  $2.99\nService Fee  $3.48\nDasher Tip  $4.00\nTotal Charged: $29.82\nOctober 8, 2026 11:47 PM`;
+      };
+      $('#rcptGo', sh).onclick = async () => {
+        const txt = $('#rcpt', sh).value.trim(); if (!txt) return toast('paste a receipt first');
+        const out = $('#rcptOut', sh); out.innerHTML = '<span class="spinner"></span> reading receipt…';
+        const r = await R.ai.parseReceipt(txt);
+        const cat = R.CATEGORIES[r.category] ? r.category : 'Other';
+        out.innerHTML = `<div class="card"><div class="txn"><div class="ic">${R.CATEGORIES[cat].emoji}</div><div class="grow"><b>${esc(r.merchant)}</b><small>${esc(cat)} · ${esc(r.date)} · ${esc(r.items || '')}</small></div><div class="amt num">${money(+r.amount || 0)}</div></div>
+          <div class="row" style="justify-content:space-between;margin-top:8px"><small class="muted">parsed via ${r.via === 'gemini' ? '✨ Gemini' : 'offline regex'}</small><button class="btn sm" id="rcptAdd">add to my spending</button></div></div>`;
+        $('#rcptAdd', sh).onclick = () => {
+          const d = new Date(r.date + 'T12:00:00'); const iso = isNaN(d) ? new Date().toISOString() : d.toISOString();
+          S.extraTxns.push({ date: iso, merchant: String(r.merchant).slice(0, 28), category: cat, amount: +r.amount || 0 });
+          save(); recompute(); toast('added 🧾'); if (S.onboarded && !fromWelcome) route();
+          $('#rcptAdd', sh).disabled = true; $('#rcptAdd', sh).textContent = 'added ✓';
+        };
+      };
+    });
+  }
+
+  // ---------- shell ----------
+  const TABS = [['home', '🧾', 'Wrapped'], ['friends', '👯', 'Friends'], ['squads', '🤝', 'Squads'], ['roasts', '🔥', 'Roasts']];
+  function renderShell(page) {
+    if (!TABS.some((t) => t[0] === page)) page = 'home';
+    phone.innerHTML = `
+      <div class="topbar"><div class="logo">receipts<i>.</i></div>
+        <div class="row" style="gap:8px"><button class="icon-btn" data-act="gmail" title="import receipts">📧</button><button class="icon-btn" data-act="settings" title="settings">⚙️</button></div></div>
+      <main class="screen" id="screen"></main>
+      <nav class="tabbar">${TABS.map(([id, ic, lb]) => `<a class="tab ${id === page ? 'on' : ''}" href="#/${id}"><span>${ic}</span>${lb}</a>`).join('')}</nav>`;
+    const screen = $('#screen', phone);
+    ({ home: renderHome, friends: renderFriends, squads: renderSquads, roasts: renderRoasts })[page](screen);
+  }
+
+  // ---------- HOME ----------
+  function renderHome(el) {
+    const a = A.me;
+    const C = 2 * Math.PI * 44;
+    const ch = S.challenge;
+    el.innerHTML = `
+      <h1 class="title">${esc(a.monthLabel)}<br><span class="muted">receipts</span></h1>
+      <div class="hero" data-act="play">
+        <div class="shape blob" style="width:220px;height:220px;top:-50px;right:-50px;background:var(--pink);animation:morph 8s ease-in-out infinite alternate"></div>
+        <div class="shape star" style="width:64px;height:64px;bottom:26px;right:28px;background:var(--lime);animation:spin 16s linear infinite"></div>
+        <div class="shape ring" style="width:90px;height:90px;top:18px;right:26px;border-width:12px;border-color:var(--yellow);animation:float 5s ease-in-out infinite alternate"></div>
+        <div class="kicker">just dropped</div>
+        <h2>your ${esc(a.monthLabel)} wrapped is ready</h2>
+        <span class="btn dark play">▶ play it</span>
+      </div>
+
+      <div class="card predict" style="margin-top:12px">
+        <div style="font-weight:800">🔮 ${ch ? 'challenge active' : 'we predict'} · ${esc(a.nextLabel)}</div>
+        ${ch ? `<div class="big num">beat ${money(ch.target, 0)}</div>
+          <div class="muted" style="font-weight:600">that’s ${money(ch.target / 31, 0)}/day. your squads have been notified 👀</div>
+          <div class="progress"><i style="width:${Math.round((9 / 31) * 100)}%"></i></div>
+          <div class="row" style="justify-content:space-between;font-size:13px;font-weight:700"><span>day 9 of 31</span><span>${money(ch.target - (ch.target / 31) * 9, 0)} left to spend</span></div>`
+        : `<div class="big num">${money(a.prediction, 0)}</div>
+          <div class="muted" style="font-weight:600">that’s our bet for next month. prove me wrong.</div>
+          <button class="btn dark sm" style="margin-top:12px" data-act="challenge">challenge accepted 🤝</button>`}
+      </div>
+
+      <div class="section-h"><h3>health score</h3><small>${esc(a.score.vibe)}</small></div>
+      <div class="card score-card">
+        <div class="ring"><svg width="104" height="104"><circle cx="52" cy="52" r="44" stroke="var(--surface-2)" stroke-width="12" fill="none"/>
+          <circle class="fg" cx="52" cy="52" r="44" stroke="${gradeColor(a.score.grade)}" stroke-width="12" fill="none" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C}" data-off="${C * (1 - a.score.score / 100)}"/></svg>
+          <div class="lbl"><div><b class="num">${a.score.score}</b><small>grade ${a.score.grade}</small></div></div></div>
+        <div class="parts">${a.score.parts.map((p) => `<div class="part"><div class="row" style="justify-content:space-between"><span>${p.label}</span><span class="muted num">${Math.round(p.pts)}/${p.max}</span></div><div class="bar"><i style="width:0" data-w="${(p.pts / p.max) * 100}%"></i></div></div>`).join('')}</div>
+      </div>
+
+      <div class="section-h"><h3>glow-up plan</h3><small>save up to ${money(a.insights.reduce((s, i) => s + i.save, 0), 0)}/yr</small></div>
+      <div id="plan"></div>
+      ${a.insights.slice(0, 4).map((i) => `<div class="card insight"><div class="em">${i.emoji}</div><div class="grow"><h4>${esc(i.title)}</h4><p>${esc(i.body)}</p><div class="save">save ~${money(i.save, 0)}/yr</div></div></div>`).join('')}
+      <button class="btn block ghost" style="margin-top:12px" data-act="plan">✨ build my glow-up plan${R.gemini.enabled ? ' with Gemini' : ''}</button>
+
+      <div class="section-h"><h3>where it went</h3><small>vs ${esc(a.prevLabel || 'last month')}</small></div>
+      <div class="card cats">${a.byCat.slice(0, 7).map((c) => {
+        const prev = a.catDeltas.find((d) => d.cat === c.cat)?.prev || 0;
+        const dp = prev ? Math.round(((c.amt - prev) / prev) * 100) : null;
+        return `<div class="cat-row"><div class="top"><span>${R.CATEGORIES[c.cat].emoji} ${esc(c.cat)} ${dp !== null ? `<span class="delta ${dp > 0 ? 'up' : 'down'}">${dp > 0 ? '▲' : '▼'}${Math.abs(dp)}%</span>` : ''}</span><span class="num">${money(c.amt, 0)}</span></div>
+          <div class="bar"><i style="width:${(c.amt / a.byCat[0].amt) * 100}%;background:${R.CATEGORIES[c.cat].color}"></i></div></div>`;
+      }).join('')}</div>
+
+      <div class="section-h"><h3>recent</h3><small>${S.source === 'csv' ? 'from your CSV' : 'demo bank'} · tap to get roasted</small></div>
+      <div class="card" style="padding:6px 16px">${recentTxns().map((t, i) => `<div class="txn"><div class="ic">${R.CATEGORIES[t.category]?.emoji || '🧾'}</div>
+        <div class="grow"><b>${esc(t.merchant)}</b><small>${new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}${t.noTime ? '' : ' · ' + new Date(t.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</small></div>
+        <div style="text-align:right"><div class="amt num">${money(t.amount)}</div><button class="roast-it" data-act="roastTxn" data-i="${i}">🔥 roast</button></div></div>`).join('')}</div>
+      <button class="btn block ghost" style="margin-top:12px" data-act="gmail">📧 add a receipt from email</button>`;
+    requestAnimationFrame(() => setTimeout(() => {
+      el.querySelectorAll('[data-off]').forEach((c) => (c.style.strokeDashoffset = c.dataset.off));
+      el.querySelectorAll('[data-w]').forEach((b) => (b.style.width = b.dataset.w));
+    }, 80));
+  }
+  const recentTxns = () => {
+    const all = [...(S.source === 'csv' && S.csvTxns ? S.csvTxns : DATA.me), ...S.extraTxns].filter((t) => !t.recurring);
+    return all.sort((x, y) => y.date.localeCompare(x.date)).slice(0, 10);
+  };
+
+  async function showPlan(btn) {
+    const box = $('#plan'); btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> cooking…';
+    const p = await R.ai.glowUp(A.me, displayName());
+    box.innerHTML = `<div class="card plan" style="margin-bottom:12px"><div class="muted" style="font-size:12px;font-weight:700">${p.fallback ? 'YOUR PLAN' : '✨ GEMINI PLAN'}</div><h4>${esc(p.headline)}</h4>
+      ${p.steps.map((s) => `<div class="step"><div style="font-size:22px">${esc(s.emoji)}</div><div class="grow"><b>${esc(s.title)}</b><p>${esc(s.detail)}</p></div><div class="save">+${money(s.save, 0)}/mo</div></div>`).join('')}</div>`;
+    btn.innerHTML = '↺ regenerate plan'; btn.disabled = false;
+    box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  // ---------- FRIENDS ----------
+  function renderFriends(el) {
+    const sup = R.superlatives(PEOPLE);
+    const pal = ['#ff4fa3', '#c6ff3d', '#ff7a1a', '#8b5cf6', '#00d1d1', '#ffd23f', '#3d8bff', '#2ee59d'];
+    const ranked = [...PEOPLE].sort((x, y) => y.a.score.score - x.a.score.score);
+    el.innerHTML = `
+      <h1 class="title">friends</h1>
+      <div class="hero friends" data-act="playFriends" style="min-height:200px">
+        <div class="shape circle" style="width:180px;height:180px;top:-40px;right:-30px;background:var(--lime);animation:float 6s ease-in-out infinite alternate"></div>
+        <div class="shape burst" style="width:64px;height:64px;bottom:24px;right:28px;background:#0a0a0c;animation:spin 14s linear infinite"></div>
+        <div class="kicker" style="color:#0a0a0c">${PEOPLE.length} friends · ${esc(A.me.monthLabel)}</div>
+        <h2 style="color:#0a0a0c">friends wrapped</h2>
+        <span class="btn dark play">▶ play</span>
+      </div>
+      <div class="section-h"><h3>most likely to…</h3><small>swipe →</small></div>
+      <div class="hscroll">${sup.map((s, i) => `<div class="superl" style="background:${pal[i % pal.length]};${i === 3 || i === 6 ? 'color:#fff' : ''}">
+        <div class="em">${s.emoji}</div><h4>${esc(s.title)}</h4>
+        <div class="who">${avatar(s.who.person, 'sm')}${esc(s.who.person.id === 'me' ? displayName() : s.name)}</div><small>${esc(s.stat)}</small></div>`).join('')}</div>
+      <div class="section-h"><h3>leaderboard</h3><small>by health score</small></div>
+      <div class="card" style="padding:8px">${ranked.map((f, i) => `<div class="lb-row ${f.person.id === 'me' ? 'me' : ''}" data-act="profile" data-id="${f.person.id}">
+        <div class="rank">${i + 1}</div>${avatar(f.person)}
+        <div class="grow"><b>${esc(f.person.id === 'me' ? displayName() + ' (you)' : f.person.name)}</b><div class="muted" style="font-size:12px">${esc(f.a.aura.title)}</div></div>
+        <div style="text-align:right;margin-right:6px"><b class="num">${money(f.a.total, 0)}</b><div class="delta ${f.a.deltaPct > 0 ? 'up' : 'down'}">${f.a.deltaPct > 0 ? '▲' : '▼'}${Math.abs(Math.round(f.a.deltaPct * 100))}%</div></div>
+        <div class="grade" style="background:${gradeColor(f.a.score.grade)}">${f.a.score.grade}</div></div>`).join('')}</div>
+      <button class="btn block ghost" style="margin-top:12px" data-act="invite">➕ invite friends</button>`;
+  }
+
+  function openProfile(id) {
+    const f = personById(id); const a = f.a; const p = f.person;
+    sheet(`<div style="text-align:center">${avatar(p, 'lg')}
+        <h3 style="margin-top:10px">${esc(id === 'me' ? displayName() : p.name)}</h3><div class="muted">${esc(p.handle)}</div>
+        <div class="pill" style="margin-top:10px;background:linear-gradient(90deg,${a.aura.grad[0]},${a.aura.grad[1]});color:#0a0a0c">${esc(a.aura.title)}</div></div>
+      <div class="row" style="margin:18px 0;gap:8px">
+        <div class="card grow" style="padding:12px;text-align:center"><div class="muted" style="font-size:12px">spent</div><b class="num">${money(a.total, 0)}</b></div>
+        <div class="card grow" style="padding:12px;text-align:center;margin:0"><div class="muted" style="font-size:12px">vs last mo</div><b class="delta ${a.deltaPct > 0 ? 'up' : 'down'}" style="font-size:16px">${a.deltaPct > 0 ? '+' : ''}${Math.round(a.deltaPct * 100)}%</b></div>
+        <div class="card grow" style="padding:12px;text-align:center;margin:0"><div class="muted" style="font-size:12px">score</div><b>${a.score.score} · ${a.score.grade}</b></div>
+      </div>
+      <div class="cats">${a.byCat.slice(0, 3).map((c) => `<div class="cat-row"><div class="top"><span>${R.CATEGORIES[c.cat].emoji} ${esc(c.cat)}</span><span class="num">${money(c.amt, 0)}</span></div><div class="bar"><i style="width:${(c.amt / a.byCat[0].amt) * 100}%;background:${R.CATEGORIES[c.cat].color}"></i></div></div>`).join('')}</div>
+      <p class="muted" style="margin-top:14px;font-size:14px">top merchant: <b style="color:#fff">${esc(a.topMerchant.name)}</b> (${money(a.topMerchant.amt, 0)}) · on repeat: <b style="color:#fff">${esc(a.mostVisited.name)} ×${a.mostVisited.count}</b></p>
+      <div id="pr" class="card" style="margin-top:14px;display:none"></div>
+      <div class="share-actions">
+        <button class="btn" data-x="wrap">▶ their wrapped</button>
+        ${id !== 'me' ? `<button class="btn ghost" data-x="roast">🔥 roast</button><button class="btn ghost" data-x="nudge">👀 nudge</button>` : ''}
+      </div>`, (sh) => {
+      sh.querySelector('[data-x=wrap]').onclick = () => { closeSheet(); playSolo(id); };
+      const r = sh.querySelector('[data-x=roast]');
+      if (r) r.onclick = async () => {
+        const box = $('#pr', sh); box.style.display = 'block'; box.innerHTML = '<span class="spinner"></span>';
+        const txt = await R.ai.roast(a, p.name);
+        box.innerHTML = `<div style="font-weight:700;font-size:16px;line-height:1.35">${esc(txt)}</div>`;
+      };
+      const n = sh.querySelector('[data-x=nudge]');
+      if (n) n.onclick = () => { toast(`nudged ${p.name}: “put the phone down” 📵`); closeSheet(); };
+    });
+  }
+
+  // ---------- SQUADS ----------
+  function squadStatus(sq) {
+    return sq.members.map((id) => {
+      const a = A[id]; const amt = a?.byCat.find((c) => c.cat === sq.cat)?.amt || 0;
+      return { id, amt, ok: amt <= sq.limit };
+    }).sort((x, y) => x.amt - y.amt);
+  }
+  function renderSquads(el) {
+    el.innerHTML = `
+      <h1 class="title">squads</h1>
+      <p class="muted" style="margin:-8px 4px 16px">accountability groups. set a cap, bet on each other, get roasted when you slip.</p>
+      <div class="row" style="gap:8px"><button class="btn grow" data-act="newSquad">＋ new squad</button><button class="btn ghost" data-act="joinSquad">join w/ code</button></div>
+      ${S.squads.map((sq) => {
+        const st = squadStatus(sq); const okN = st.filter((m) => m.ok).length;
+        const max = Math.max(sq.limit * 1.6, ...st.map((m) => m.amt));
+        return `<div class="card squad" style="margin-top:12px">
+          <div class="head"><div class="em" style="background:${sq.color}22">${sq.emoji}</div>
+            <div class="grow"><h4>${esc(sq.name)}</h4><div class="muted" style="font-size:13px">${R.CATEGORIES[sq.cat].emoji} ${esc(sq.cat)} ≤ ${money(sq.limit, 0)}/mo · 🔥 ${sq.streak || 0} wk streak</div></div>
+            <div class="pill" style="background:${okN === st.length ? 'var(--mint)' : 'var(--surface-2)'};color:${okN === st.length ? '#0a0a0c' : 'inherit'}">${okN}/${st.length} on track</div></div>
+          ${st.map((m) => {
+            const p = personById(m.id).person;
+            return `<div class="member">${avatar(p, 'sm')}<div style="width:58px;font-weight:700">${esc(m.id === 'me' ? 'you' : p.name)}</div>
+              <div class="bar"><i style="width:${Math.min(100, (m.amt / max) * 100)}%;background:${m.ok ? 'var(--mint)' : 'var(--red)'}"></i><i style="left:${(sq.limit / max) * 100}%;width:2px;background:#fff;border-radius:0"></i></div>
+              <div class="v num">${money(m.amt, 0)} ${m.ok ? '✅' : '💀'}</div></div>`;
+          }).join('')}
+          <div class="stakes"><span>🎲 ${esc(sq.stakes)}</span><button style="font-weight:800;color:var(--lime)" data-act="invSquad" data-code="${esc(sq.code)}">invite</button></div>
+        </div>`;
+      }).join('')}`;
+  }
+  function newSquadSheet(prefill = {}) {
+    sheet(`<h3>new squad</h3><p class="sub">pick a category, set a monthly cap, choose your victims.</p>
+      <div class="field"><label>name</label><input class="input" id="sqName" placeholder="e.g. Uber Anonymous" value="${esc(prefill.name || '')}"></div>
+      <div class="row" style="gap:10px"><div class="field" style="width:80px"><label>emoji</label><input class="input" id="sqEmoji" value="${esc(prefill.emoji || '💸')}" maxlength="2" style="text-align:center"></div>
+        <div class="field grow"><label>category</label><select class="input" id="sqCat">${Object.keys(R.CATEGORIES).filter((c) => c !== 'Other').map((c) => `<option ${c === (prefill.cat || 'Delivery') ? 'selected' : ''}>${c}</option>`).join('')}</select></div></div>
+      <div class="field"><label>monthly cap ($)</label><input class="input" id="sqLimit" type="number" value="${prefill.limit || 100}" min="0"></div>
+      <div class="field"><label>stakes</label><input class="input" id="sqStakes" placeholder="loser buys boba" value="${esc(prefill.stakes || 'loser buys everyone boba 🧋')}"></div>
+      <div class="field"><label>members</label><div class="friend-pick">${PEOPLE.filter((p) => p.person.id !== 'me').map((p) => `<label><input type="checkbox" value="${p.person.id}">${avatar(p.person, 'sm')}${esc(p.person.name)}</label>`).join('')}</div></div>
+      <button class="btn block" id="sqCreate">create squad</button>`, (sh) => {
+      $('#sqCreate', sh).onclick = () => {
+        const name = $('#sqName', sh).value.trim() || 'Unnamed Squad';
+        const members = ['me', ...[...sh.querySelectorAll('.friend-pick input:checked')].map((i) => i.value)];
+        const colors = ['#ff4fa3', '#c6ff3d', '#ff7a1a', '#8b5cf6', '#00d1d1', '#3d8bff'];
+        const code = (name.replace(/[^a-z]/gi, '').slice(0, 4).toUpperCase() || 'SQAD') + Math.floor(10 + Math.random() * 89);
+        S.squads.unshift({ id: 'sq' + Date.now(), name, emoji: $('#sqEmoji', sh).value || '💸', color: colors[S.squads.length % colors.length],
+          cat: $('#sqCat', sh).value, limit: +$('#sqLimit', sh).value || 100, stakes: $('#sqStakes', sh).value, members, code, streak: 0 });
+        save(); closeSheet(); route(); toast('squad created 🤝 invite link copied');
+        copy(`${baseUrl()}#/join/${code}`);
+      };
+    });
+  }
+  function joinSquad(code) {
+    code = String(code || '').toUpperCase().trim();
+    if (!code) return;
+    if (S.squads.some((s) => s.code === code)) return toast('you’re already in that squad');
+    const pub = PUBLIC_SQUADS[code];
+    if (!pub) return toast('no squad with that code 🤔 try GYMRAT');
+    S.squads.unshift({ id: 'sq' + Date.now(), code, streak: 2, ...pub, members: ['me', ...pub.members] });
+    save(); route(); toast(`joined ${pub.name} ${pub.emoji}`);
+  }
+
+  // ---------- ROASTS ----------
+  function seedFeed() {
+    const pick = (id, f) => DATA[id].filter((t) => !t.recurring && t.date.startsWith('2026-09')).sort(f)[0];
+    const biggest = (x, y) => y.amount - x.amount;
+    const lateOne = (id, m) => DATA[id].filter((t) => t.merchant === m && [0, 1, 2, 3].includes(new Date(t.date).getHours()))[0] || pick(id, biggest);
+    return [
+      { who: 'priya', t: pick('priya', biggest), roast: 'the receipt says “final sale.” so does your savings account.', by: 'Gemini', reacts: { '💀': 14, '🔥': 6, '😭': 9, '🧢': 3 }, comments: [{ who: 'marcus', text: 'it was NOT on sale 💀' }, { who: 'priya', text: 'it was spiritually on sale' }] },
+      { who: 'marcus', t: lateOne('marcus', 'DoorDash'), roast: 'a 1am doordash isn’t a meal, it’s a cry for help. the dasher knows your dog’s name.', by: 'Gemini', reacts: { '💀': 22, '🔥': 4, '😭': 11, '🧢': 0 }, comments: [{ who: 'maya', text: 'the kitchen is RIGHT there' }] },
+      { who: 'jordan', t: pick('jordan', (x, y) => (y.merchant === 'Uber') - (x.merchant === 'Uber') || y.amount - x.amount), roast: 'paying uber surge pricing to go somewhere you’ll spend more money. the circle of broke.', by: 'Dev', reacts: { '💀': 8, '🔥': 12, '😭': 2, '🧢': 1 }, comments: [] },
+      { who: 'dev', t: pick('dev', (x, y) => (y.merchant === 'Steam') - (x.merchant === 'Steam') || y.amount - x.amount), roast: 'another game for the backlog. your steam library has more unplayed titles than your bank has dollars.', by: 'Gemini', reacts: { '💀': 10, '🔥': 3, '😭': 5, '🧢': 0 }, comments: [{ who: 'jordan', text: 'he’s gonna play it for 11 minutes' }] },
+      { who: 'maya', t: pick('maya', biggest), roast: 'biggest purchase of the month is… groceries. boring. responsible. we hate it here (proud of you).', by: 'Priya', reacts: { '💀': 2, '🔥': 19, '😭': 1, '🧢': 0 }, comments: [{ who: 'priya', text: 'teach me your ways' }] },
+    ].map((p, i) => ({ id: 'seed' + i, who: p.who, merchant: p.t.merchant, amount: p.t.amount, category: p.t.category, date: p.t.date, note: p.t.note, roast: p.roast, by: p.by, reacts: p.reacts, mine: {}, comments: p.comments }));
+  }
+
+  function renderRoasts(el) {
+    el.innerHTML = `
+      <h1 class="title">roast board</h1>
+      <p class="muted" style="margin:-8px 4px 16px">confess a purchase. let the group chat (and Gemini) judge.</p>
+      <button class="btn block" data-act="confess">🙏 confess a purchase</button>
+      ${S.feed.map((p) => {
+        const person = personById(p.who).person;
+        return `<div class="card post" style="margin-top:12px" data-id="${p.id}">
+        <div class="who">${avatar(person)}<div class="grow"><b>${esc(p.who === 'me' ? displayName() : person.name)}</b><small>${esc(person.handle)} · ${new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</small></div><span class="pill">${R.CATEGORIES[p.category]?.emoji || '🧾'} ${esc(p.category)}</span></div>
+        <div class="receipt"><div class="line"><span>${esc(String(p.merchant).toUpperCase())}</span><span>${new Date(p.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span></div>
+          ${p.note ? `<div style="margin-top:6px;opacity:.7">“${esc(p.note)}”</div>` : ''}
+          <div class="line tot"><span>TOTAL</span><span>${money(p.amount)}</span></div></div>
+        <div class="roast">${esc(p.roast)}<span class="by">— roasted by ${esc(p.by)}</span></div>
+        <div class="reacts">${Object.entries(p.reacts).map(([e, n]) => `<button class="react ${p.mine[e] ? 'on' : ''}" data-act="react" data-e="${e}">${e} ${n + (p.mine[e] ? 1 : 0)}</button>`).join('')}</div>
+        <div class="comments">${p.comments.map((c) => `<p><b>${esc(nameOf(c.who))}</b>${esc(c.text)}</p>`).join('')}</div>
+        <form class="comment-box" data-act="comment"><input class="input" placeholder="add a roast…" maxlength="120"><button class="btn sm">send</button></form>
+      </div>`;
+      }).join('')}`;
+  }
+
+  async function postRoast(t, who = 'me') {
+    toast('roasting… 🔥');
+    const roast = await R.ai.roastPurchase(t, who === 'me' ? 'this person' : nameOf(who));
+    S.feed.unshift({ id: 'p' + Date.now(), who, merchant: t.merchant, amount: t.amount, category: t.category, date: t.date, note: t.note,
+      roast, by: R.gemini.enabled ? 'Gemini' : 'roast bot', reacts: { '💀': 0, '🔥': 0, '😭': 0, '🧢': 0 }, mine: {},
+      comments: [{ who: 'marcus', text: 'LMAOOO' }] });
+    save(); location.hash = '#/roasts'; route();
+  }
+  function confessSheet() {
+    sheet(`<h3>confess 🙏</h3><p class="sub">what did you buy. be honest. the group chat will know.</p>
+      <div class="field"><label>where</label><input class="input" id="cfM" placeholder="e.g. Sephora"></div>
+      <div class="row" style="gap:10px"><div class="field grow"><label>how much ($)</label><input class="input" id="cfA" type="number" step="0.01" placeholder="49.99"></div>
+        <div class="field grow"><label>category</label><select class="input" id="cfC">${Object.keys(R.CATEGORIES).map((c) => `<option>${c}</option>`).join('')}</select></div></div>
+      <div class="field"><label>your defense (optional)</label><input class="input" id="cfN" placeholder="it was on sale"></div>
+      <button class="btn block" id="cfGo">get roasted 🔥</button>`, (sh) => {
+      $('#cfM', sh).oninput = (e) => { const c = R.categorize(e.target.value); if (c !== 'Other') $('#cfC', sh).value = c; };
+      $('#cfGo', sh).onclick = () => {
+        const m = $('#cfM', sh).value.trim(); const amt = parseFloat($('#cfA', sh).value);
+        if (!m || !(amt > 0)) return toast('need a place and an amount');
+        closeSheet();
+        postRoast({ merchant: m, amount: amt, category: $('#cfC', sh).value, date: new Date().toISOString(), note: $('#cfN', sh).value.trim() || undefined });
+      };
+    });
+  }
+
+  // ---------- settings ----------
+  function settingsSheet() {
+    const g = R.gemini.config;
+    sheet(`<h3>settings</h3><p class="sub">everything is stored locally in this browser.</p>
+      <div class="field"><label>display name</label><input class="input" id="stName" value="${esc(S.name)}" placeholder="You"></div>
+      <div class="field"><label>monthly budget ($)</label><input class="input" id="stBudget" type="number" value="${S.budget}"></div>
+      <div class="section-h" style="margin-top:8px"><h3>✨ Gemini</h3><small>${R.gemini.enabled ? 'connected' : 'off — using roast bot'}</small></div>
+      <div class="field"><label>API key (aistudio.google.com/apikey)</label><input class="input" id="stKey" type="password" value="${esc(g.key || '')}" placeholder="AIza…"></div>
+      <div class="field"><label>model</label><input class="input" id="stModel" value="${esc(g.model || 'gemini-2.5-flash')}"></div>
+      <button class="btn sm ghost" id="stTest">test connection</button> <span id="stTestOut" class="muted" style="font-size:13px;margin-left:6px"></span>
+      <div class="section-h"><h3>data</h3><small>${S.source === 'csv' ? `CSV · ${S.csvTxns?.length || 0} txns` : 'demo bank'}</small></div>
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        <button class="btn sm ghost" id="stCsv">upload CSV</button>
+        <button class="btn sm ghost" id="stSample">sample CSV</button>
+        ${S.source === 'csv' ? '<button class="btn sm ghost" id="stDemo">back to demo data</button>' : ''}
+        <button class="btn sm ghost" id="stReset" style="color:var(--red)">reset everything</button>
+      </div><input type="file" id="stFile" accept=".csv,text/csv" hidden>
+      <button class="btn block" id="stSave" style="margin-top:22px">save</button>`, (sh) => {
+      $('#stSave', sh).onclick = () => {
+        S.name = $('#stName', sh).value; S.budget = +$('#stBudget', sh).value || 1500;
+        R.gemini.save({ key: $('#stKey', sh).value.trim(), model: $('#stModel', sh).value.trim() || 'gemini-2.5-flash' });
+        save(); recompute(); closeSheet(); route(); toast('saved ✓');
+      };
+      $('#stTest', sh).onclick = async () => {
+        R.gemini.save({ key: $('#stKey', sh).value.trim(), model: $('#stModel', sh).value.trim() || 'gemini-2.5-flash' });
+        const out = $('#stTestOut', sh); out.textContent = 'testing…';
+        try { const r = await R.gemini.generate('Reply with exactly: receipts ok', { temperature: 0 }); out.textContent = '✅ ' + r.slice(0, 40); }
+        catch (e) { out.textContent = '❌ ' + e.message.slice(0, 80); }
+      };
+      $('#stCsv', sh).onclick = () => $('#stFile', sh).click();
+      $('#stFile', sh).onchange = (e) => { closeSheet(); handleCSV(e.target.files[0], false); };
+      $('#stSample', sh).onclick = () => {
+        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([R.SAMPLE_CSV], { type: 'text/csv' })); a.download = 'sample-statement.csv'; a.click();
+      };
+      const d = $('#stDemo', sh); if (d) d.onclick = () => { S.source = 'demo'; save(); recompute(); closeSheet(); route(); };
+      $('#stReset', sh).onclick = () => { if (confirm('reset all local data?')) { localStorage.removeItem(LS); location.hash = ''; location.reload(); } };
+    });
+  }
+
+  // ---------- wrapped players ----------
+  function playSolo(id = 'me') {
+    const f = personById(id); if (!f) return;
+    const nm = id === 'me' ? displayName() : f.person.name;
+    new R.Story(phone, R.soloSlides({
+      a: f.a, name: nm, friends: id === 'me' ? PEOPLE : null,
+      onChallenge: () => {
+        if (id !== 'me') return toast(`challenged ${nm} 😈`);
+        S.challenge = { target: Math.round(f.a.prediction * 0.9), month: f.a.nextLabel, at: Date.now() }; save(); toast('challenge locked in 🔒');
+      },
+      onShare: (kind) => share(kind, f.a, nm),
+    }), { onClose: () => { if (/wrapped/.test(location.hash)) history.replaceState(null, '', '#/home'); route(); } });
+  }
+  function playFriends() {
+    new R.Story(phone, R.friendSlides({ people: PEOPLE, name: displayName(), onShare: (k) => share(k) }),
+      { onClose: () => { if (/wrapped/.test(location.hash)) history.replaceState(null, '', '#/friends'); } });
+  }
+
+  async function share(kind, a, name) {
+    if (kind === 'img') {
+      await document.fonts?.ready;
+      const c = R.shareImage(R.summaryData(a, name));
+      c.toBlob((b) => { const l = document.createElement('a'); l.href = URL.createObjectURL(b); l.download = `receipts-${a.monthLabel.toLowerCase()}-wrapped.png`; l.click(); });
+      return toast('image saved ⬇');
+    }
+    const url = kind === 'friends' ? `${baseUrl()}#/welcome` : `${baseUrl()}#/share/${b64.enc(R.summaryData(a, name))}`;
+    const text = kind === 'friends' ? 'our group chat’s money got wrapped 💀 get on receipts.' : `my ${a.monthLabel} money aura: ${a.aura.title} 💀`;
+    if (navigator.share && /Mobi/i.test(navigator.userAgent)) { try { await navigator.share({ title: 'receipts.', text, url }); return; } catch {} }
+    await copy(url); toast('link copied 🔗 send it to the group chat');
+  }
+
+  // ---------- public share page ----------
+  function renderShare(code) {
+    let d; try { d = b64.dec(code); } catch { phone.innerHTML = '<div class="welcome"><h1>link broke 💀</h1></div>'; return; }
+    phone.innerHTML = `<div class="welcome" style="background:#0a0a0c;color:#fff">
+      <div class="logo">receipts<i style="color:var(--lime)">.</i></div>
+      <div style="margin:auto 0;padding:30px 0">
+        <p style="font-size:18px;font-weight:600;margin-bottom:14px">${esc(d.n === 'You' ? 'someone' : d.n)} shared their wrapped with you 👀</p>
+        ${R.summaryCard(d)}
+      </div>
+      <a class="btn block" href="#/welcome" style="text-decoration:none">get your own receipts →</a>
+      <p class="fine" style="color:#fff">spotify wrapped for your bank account</p>
+    </div>`;
+  }
+
+  // ---------- global click delegation ----------
+  phone.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-act]'); if (!t) return;
+    const act = t.dataset.act;
+    if (act === 'play') playSolo();
+    else if (act === 'playFriends') playFriends();
+    else if (act === 'settings') settingsSheet();
+    else if (act === 'gmail' && S.onboarded) openGmailScan(false);
+    else if (act === 'plan') showPlan(t);
+    else if (act === 'challenge') { S.challenge = { target: Math.round(A.me.prediction * 0.9), month: A.me.nextLabel }; save(); route(); toast('challenge locked in 🔒'); }
+    else if (act === 'roastTxn') postRoast(recentTxns()[+t.dataset.i]);
+    else if (act === 'profile') openProfile(t.dataset.id);
+    else if (act === 'invite') { copy(`${baseUrl()}#/welcome`); toast('invite link copied 🔗'); }
+    else if (act === 'newSquad') newSquadSheet();
+    else if (act === 'joinSquad') sheet(`<h3>join a squad</h3><p class="sub">got a code from the group chat? (try <b>GYMRAT</b> or <b>UBER0</b>)</p>
+        <div class="field"><input class="input" id="jc" placeholder="CODE" style="text-transform:uppercase;letter-spacing:.1em;font-weight:800"></div><button class="btn block" id="jcGo">join</button>`,
+      (sh) => { $('#jcGo', sh).onclick = () => { const c = $('#jc', sh).value; closeSheet(); joinSquad(c); }; });
+    else if (act === 'invSquad') { copy(`${baseUrl()}#/join/${t.dataset.code}`); toast(`invite copied · code ${t.dataset.code}`); }
+    else if (act === 'confess') confessSheet();
+    else if (act === 'react') {
+      const p = S.feed.find((x) => x.id === t.closest('.post').dataset.id); const em = t.dataset.e;
+      p.mine[em] = !p.mine[em]; save();
+      t.classList.toggle('on', p.mine[em]); t.textContent = `${em} ${p.reacts[em] + (p.mine[em] ? 1 : 0)}`;
+    }
+  });
+  phone.addEventListener('submit', (e) => {
+    const f = e.target.closest('[data-act=comment]'); if (!f) return;
+    e.preventDefault();
+    const inp = f.querySelector('input'); const text = inp.value.trim(); if (!text) return;
+    const p = S.feed.find((x) => x.id === f.closest('.post').dataset.id);
+    p.comments.push({ who: 'me', text }); save();
+    f.previousElementSibling.insertAdjacentHTML('beforeend', `<p><b>${esc(displayName())}</b>${esc(text)}</p>`);
+    inp.value = '';
+  });
+
+  // ---------- boot ----------
+  recompute();
+  route();
+})();
