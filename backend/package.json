@@ -1,0 +1,22 @@
+{
+  "name": "finapp-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "scripts": {
+    "sync": "node scripts/sync-assets.mjs",
+    "predev": "npm run sync",
+    "dev": "next dev --hostname 127.0.0.1",
+    "prebuild": "npm run sync",
+    "build": "next build",
+    "start": "next start --hostname 127.0.0.1"
+  },
+  "dependencies": {
+    "next": "16.4.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  }
+}

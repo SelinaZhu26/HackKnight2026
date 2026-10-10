@@ -17,6 +17,17 @@ python3 -m http.server 5173
 
 (Or open `index.html` directly. A local server is only needed for share links to look right.)
 
+For a Next.js server, see [`backend/README.md`](backend/README.md). Run `npm ci`
+and `npm run dev` from `backend/`; it copies and serves the existing frontend
+without converting it to React. Production uses `npm run build` and `npm start`.
+
+For Docker, set the image repository and version in `.env`, then run
+`docker compose -f compose.yaml -f compose.build.yaml up --build -d --wait`
+from this directory and open http://localhost:3001. The base Compose file can
+deploy the published image using `docker compose pull` and
+`docker compose up -d --wait`. See [`backend/README.md`](backend/README.md) for
+publishing, deployment, and Nginx integration.
+
 On desktop it renders inside a phone frame with a pitch panel beside it. On a phone it runs full screen.
 
 CSV imports use debit/credit columns or recognized transaction types when available. For amount-only exports, choose whether purchases are negative or positive before importing; the opposite sign is excluded. Date-only imports use local calendar dates (`YYYY-MM-DD`, `YYYY/MM/DD`, bank `MM/DD/YYYY` / `MM-DD-YYYY` including two-digit bank years, or English month names such as `September 1, 2026`), while ISO timestamps retain their time and offset.

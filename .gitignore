@@ -1,1 +1,6 @@
 .env
+backend/node_modules/
+backend/.next/
+backend/public/
+backend/.npm-cache/
+backend/.env*
