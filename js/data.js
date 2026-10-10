@@ -203,8 +203,29 @@
     return out.map((s) => s.trim());
   }
 
-  // Accepts most bank exports: needs a date column, a description column, and amount (or debit/credit).
-  R.parseCSV = function (text) {
+  // Date-only values are local calendar dates; timestamps retain their time and offset.
+  R.parseTransactionDate = function (value) {
+    const text = String(value || '').trim();
+    const iso = text.match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})$/);
+    const bank = text.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4}|\d{2})$/);
+    const named = text.match(/^([A-Za-z]+)\s+(\d{1,2}),?\s+(\d{4})$/);
+    const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+    if (iso || bank || named) {
+      let [y, m, day] = iso ? iso.slice(1).map(Number) : bank ? [+bank[3], +bank[1], +bank[2]] : [+named[3], monthNames.findIndex((name) => name === named[1].toLowerCase() || name.slice(0, 3) === named[1].toLowerCase()) + 1, +named[2]];
+      if (bank && bank[3].length === 2) y += y < 50 ? 2000 : 1900;
+      const d = new Date(y, m - 1, day, 12);
+      if (d.getFullYear() !== y || d.getMonth() !== m - 1 || d.getDate() !== day) return null;
+      return { date: d.toISOString(), noTime: true };
+    }
+    // Only accept genuine timestamp forms here, so invalid date-only formats cannot roll over.
+    if (!/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(text)) return null;
+    const calendar = R.parseTransactionDate(text.slice(0, 10));
+    const d = new Date(text);
+    return calendar && !isNaN(d) ? { date: d.toISOString(), noTime: false } : null;
+  };
+
+  // Amount-only exports need an explicit sign. Debit/credit and recognized types take precedence.
+  R.parseCSV = function (text, { spendingSign } = {}) {
     const lines = text.split(/\r?\n/).filter((l) => l.trim());
     if (lines.length < 2) throw new Error('CSV looks empty');
     const head = splitCSVLine(lines[0]).map((h) => h.toLowerCase());
@@ -212,32 +233,49 @@
     const iDate = find(/date|posted/);
     const iDesc = find(/desc|merchant|name|payee|memo|details/);
     const iAmt = find(/^amount|amount$|amt/);
-    const iDebit = find(/debit|withdraw/);
+    const iType = find(/^(transaction[ _-]?)?type$|^debit\s*\/\s*credit$/);
+    const iDebit = head.findIndex((h, i) => i !== iType && /debit|withdraw/.test(h));
+    const iCredit = head.findIndex((h, i) => i !== iType && /credit|deposit/.test(h));
     if (iDate < 0 || iDesc < 0 || (iAmt < 0 && iDebit < 0)) {
       throw new Error('Need columns like Date, Description, Amount');
     }
     const rows = lines.slice(1).map(splitCSVLine);
-    // figure out sign convention: if most amounts are negative, spending = negative
-    const nums = rows.map((r) => parseFloat((r[iAmt] || '').replace(/[$,]/g, ''))).filter((n) => !isNaN(n));
-    const negSpend = nums.filter((n) => n < 0).length > nums.length / 2;
+    const amount = (value) => {
+      const raw = String(value || '').replace(/[$,\s]/g, '').replace(/^\((.+)\)$/, '-$1');
+      return raw ? Number(raw) : NaN;
+    };
+    const typeOf = (row) => {
+      const type = (row[iType] || '').trim();
+      if (/^(credit|cr|c|deposit|refund|income|payment|return)$/i.test(type)) return 'credit';
+      if (/^(debit|dr|d|purchase|withdrawal|charge|sale|fee)$/i.test(type)) return 'debit';
+      return null;
+    };
+    if (iDebit < 0 && !['negative', 'positive'].includes(spendingSign) && rows.some((r) => Number.isFinite(amount(r[iAmt])) && amount(r[iAmt]) !== 0 && !typeOf(r))) {
+      const error = new Error('Choose whether purchases are negative or positive in this CSV');
+      error.code = 'CSV_SIGN_REQUIRED';
+      throw error;
+    }
     const txns = [];
     for (const r of rows) {
       let amt;
-      if (iAmt >= 0) {
-        amt = parseFloat((r[iAmt] || '').replace(/[$,]/g, ''));
-        if (isNaN(amt)) continue;
-        if (negSpend ? amt >= 0 : amt <= 0) continue; // skip income / refunds
-        amt = Math.abs(amt);
+      if (iDebit >= 0) {
+        amt = amount(r[iDebit]);
+        if (!Number.isFinite(amt) || amt <= 0 || typeOf(r) === 'credit' || (Number.isFinite(amount(r[iCredit])) && amount(r[iCredit]) !== 0)) continue;
       } else {
-        amt = parseFloat((r[iDebit] || '').replace(/[$,]/g, ''));
-        if (isNaN(amt) || amt <= 0) continue;
+        amt = amount(r[iAmt]);
+        if (!Number.isFinite(amt) || amt === 0) continue;
+        const type = typeOf(r);
+        if (type === 'credit' || (!type && (spendingSign === 'negative' ? amt >= 0 : amt <= 0))) continue;
+        amt = Math.abs(amt);
       }
-      const d = new Date(r[iDate]);
-      if (isNaN(d)) continue;
+      const parsedDate = R.parseTransactionDate(r[iDate]);
+      if (!parsedDate) continue;
       const desc = (r[iDesc] || 'Unknown').replace(/\s{2,}/g, ' ');
-      const merchant = desc.replace(/[#*].*$/, '').replace(/\d{3,}.*/, '').trim().slice(0, 28) || desc;
+      const merchant = (desc.replace(/[#*].*$/, '').replace(/\d{3,}.*/, '').trim() || desc).slice(0, 28);
       const category = R.categorize(desc);
-      txns.push({ date: d.toISOString(), merchant, category, amount: +amt.toFixed(2), recurring: category === 'Subscriptions', noTime: true });
+      const rounded = +amt.toFixed(2);
+      if (rounded <= 0) continue;
+      txns.push({ ...parsedDate, merchant, category, amount: rounded, recurring: category === 'Subscriptions' });
     }
     if (!txns.length) throw new Error('No spending rows found');
     return txns.sort((a, b) => a.date.localeCompare(b.date));

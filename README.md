@@ -19,6 +19,10 @@ python3 -m http.server 5173
 
 On desktop it renders inside a phone frame with a pitch panel beside it. On a phone it runs full screen.
 
+CSV imports use debit/credit columns or recognized transaction types when available. For amount-only exports, choose whether purchases are negative or positive before importing; the opposite sign is excluded. Date-only imports use local calendar dates (`YYYY-MM-DD`, `YYYY/MM/DD`, bank `MM/DD/YYYY` / `MM-DD-YYYY` including two-digit bank years, or English month names such as `September 1, 2026`), while ISO timestamps retain their time and offset.
+
+Run the focused regression suite with `node --test tests/regressions.test.js`. Optional browser checks use `node tests/browser.cjs` with Playwright on the Node module path and Chrome installed; they start their own local server and use disposable browser contexts.
+
 ## Features
 
 | | |

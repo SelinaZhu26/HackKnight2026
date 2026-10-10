@@ -49,9 +49,9 @@
 
   // ---------- core analysis ----------
   R.analyze = function (allTxns, opts = {}) {
-    const budget = opts.budget || 1400;
+    const budget = Number.isFinite(opts.budget) && opts.budget > 0 ? opts.budget : 1400;
     const months = [...new Set(allTxns.map((t) => monthKey(t.date)))].sort();
-    const cur = opts.month || months[months.length - 1];
+    const cur = opts.month || months[months.length - 1] || monthKey(new Date());
     const ci = months.indexOf(cur);
     const prev = months[ci - 1];
     const prev2 = months[ci - 2];
@@ -65,7 +65,7 @@
     const prev2Total = sum(prev2Txns, (t) => t.amount);
     const daysInMonth = new Date(+cur.slice(0, 4), +cur.slice(5, 7), 0).getDate();
 
-    const byCat = groupBy(txns, 'category').map((g) => ({ ...g, cat: g.key, pct: g.amt / total }));
+    const byCat = groupBy(txns, 'category').map((g) => ({ ...g, cat: g.key, pct: total > 0 ? g.amt / total : 0 }));
     const prevByCat = Object.fromEntries(groupBy(prevTxns, 'category').map((g) => [g.key, g.amt]));
     const catDeltas = byCat.map((c) => ({ cat: c.cat, amt: c.amt, prev: prevByCat[c.cat] || 0, delta: c.amt - (prevByCat[c.cat] || 0) }))
       .sort((a, b) => b.delta - a.delta);
@@ -122,7 +122,7 @@
     const catAmt = (c) => a.byCat.find((x) => x.cat === c)?.amt || 0;
     parts.push({ label: 'Budget', pts: clamp(35 * (1.4 - a.budgetPct) / 0.8, 35), max: 35 });
     parts.push({ label: 'Trend', pts: clamp(12 - a.deltaPct * 30, 20), max: 20 });
-    const impulse = (a.delivery.amt + a.late.amt) / a.total;
+    const impulse = a.total > 0 ? (a.delivery.amt + a.late.amt) / a.total : 0;
     parts.push({ label: 'Impulse control', pts: clamp(20 * (1 - impulse / 0.6), 20), max: 20 });
     parts.push({ label: 'Subscriptions', pts: clamp(15 - a.ghostSubs.length * 4, 15), max: 15 });
     const g = catAmt('Groceries');
@@ -178,7 +178,7 @@
     const wk = a.dow[1] + a.dow[2] + a.dow[3] + a.dow[4];
     if (wkend / 3 > (wk / 4) * 1.4) {
       out.push({ id: 'weekend', emoji: '🎉', title: 'Weekend you has no chill',
-        body: `You spend ${((wkend / 3) / (wk / 4)).toFixed(1)}× more per day Fri–Sun. Pre-plan one free weekend activity.`,
+        body: wk > 0 ? `You spend ${((wkend / 3) / (wk / 4)).toFixed(1)}× more per day Fri–Sun. Pre-plan one free weekend activity.` : 'All your non-subscription spending is Fri–Sun. Pre-plan one free weekend activity.',
         save: (wkend / 3 - wk / 4) * 3 * 4 * 0.3 * 12, cat: null });
     }
     if (a.budgetPct > 1) {

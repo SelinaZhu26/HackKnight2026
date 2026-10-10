@@ -46,6 +46,16 @@ Roast the CHOICES, not the person. No slurs, no profanity beyond "damn". Use 0-2
     });
   }
 
+  R.validateReceipt = function (r) {
+    if (!r || typeof r !== 'object' || typeof r.amount !== 'number' || !Number.isFinite(r.amount) || r.amount <= 0 || +r.amount.toFixed(2) <= 0) {
+      throw new Error('Receipt needs a positive total. Add or correct the total in the email, then parse again.');
+    }
+    if (typeof r.merchant !== 'string' || !r.merchant.trim()) throw new Error('Receipt needs a merchant. Add it to the email, then parse again.');
+    const parsed = typeof r.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.date) && R.parseTransactionDate(r.date);
+    if (!parsed) throw new Error('Receipt needs a valid date (YYYY-MM-DD). Correct it, then parse again.');
+    return { ...r, merchant: r.merchant.trim().slice(0, 28), amount: +r.amount.toFixed(2), category: Object.hasOwn(R.CATEGORIES, r.category) ? r.category : 'Other', items: typeof r.items === 'string' ? r.items : '' };
+  };
+
   R.ai = {
     async roast(a, name) {
       try {
@@ -61,7 +71,8 @@ DATA: ${statsBlob(a, name)}`);
 Create a realistic 3-step plan to spend less next month. Each step must cite their real numbers and include a $ monthly saving estimate.
 Return JSON: {"headline": string (<=8 words), "steps":[{"emoji":string,"title":string(<=6 words),"detail":string(<=25 words),"save":number}]}
 DATA: ${statsBlob(a, name)}`, { json: true, temperature: 0.8 });
-        if (plan?.steps?.length) return plan;
+        if (typeof plan?.headline === 'string' && Array.isArray(plan.steps) && plan.steps.length > 0 && plan.steps.every((s) =>
+          s && ['emoji', 'title', 'detail'].every((key) => typeof s[key] === 'string') && typeof s.save === 'number' && Number.isFinite(s.save) && s.save >= 0)) return plan;
         throw new Error('bad');
       } catch (e) {
         return {
@@ -91,20 +102,33 @@ One-line roast (max 18 words) of ${who} spending $${t.amount.toFixed(2)} at ${t.
 
     // Email-receipt → transaction. This is the piece the MCP Gmail server would feed.
     async parseReceipt(text) {
+      let receipt;
       try {
         const r = await R.gemini.generate(`Extract the purchase from this receipt/order email.
 Return JSON {"merchant":string,"amount":number,"date":"YYYY-MM-DD","category":one of ${JSON.stringify(Object.keys(R.CATEGORIES))},"items":string(<=8 words)}.
 EMAIL:\n${text.slice(0, 6000)}`, { json: true, temperature: 0 });
-        return { ...r, via: 'gemini' };
+        receipt = { ...r, via: 'gemini' };
       } catch (e) {
-        const amt = (text.match(/(?:total|amount|charged)[^$\d]{0,20}\$?\s?(\d+[.,]\d{2})/i) || text.match(/\$(\d+[.,]\d{2})/) || [])[1];
+        // Prefer the final total over generic amounts or line items; parentheses denote refunds.
+        const totalLines = [...text.matchAll(/\btotal\b([^\r\n]*)/gi)];
+        const totalLine = totalLines.at(-1) || text.match(/(?:\bamount\b|\bcharged\b)([^\r\n]*)/i);
+        const amountPattern = /(?:\(\s*\$?\s*\d[\d,]*[.,]\d{2}\s*\)|[\-+]?\s*\$?\s*[\-+]?\d[\d,]*[.,]\d{2})/;
+        const amountText = totalLine ? totalLine[1].replace(/^(?:\s*(?:charged|paid|due))?\s*[:=]?\s*/i, '') : text.match(/(?:\(\s*\$\s*\d[\d,]*[.,]\d{2}\s*\)|[\-+]?\s*\$\s*[\-+]?\d[\d,]*[.,]\d{2})/)?.[0];
+        const amt = amountText?.match(new RegExp('^' + amountPattern.source))?.[0];
         const from = (text.match(/from[:\s]+([A-Z][\w&' ]{2,24})/i) || text.match(/(?:order|receipt) from ([\w&' ]{2,24})/i) || [])[1];
         const merchant = (from || text.split('\n')[0] || 'Unknown').trim().slice(0, 24);
-        return {
-          merchant, amount: amt ? parseFloat(amt.replace(',', '.')) : 0,
-          date: new Date().toISOString().slice(0, 10), category: R.categorize(text), items: 'parsed offline (no Gemini key)', via: 'regex',
+        const today = new Date();
+        const dateText = text.match(/\b\d{4}-\d{2}-\d{2}\b/)?.[0] || text.match(/\b\d{1,2}\/\d{1,2}\/\d{4}\b/)?.[0] || text.match(/\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}\b/i)?.[0];
+        const parsedDate = dateText && R.parseTransactionDate(dateText);
+        const d = parsedDate ? new Date(parsedDate.date) : today;
+        const date = dateText && !parsedDate ? dateText : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const raw = amt?.replace(/[$\s]/g, '').replace(/^\((.+)\)$/, '-$1');
+        receipt = {
+          merchant, amount: raw ? Number(raw.includes('.') ? raw.replace(/,/g, '') : raw.replace(',', '.')) : 0,
+          date, category: R.categorize(text), items: 'parsed offline (no Gemini key)', via: 'regex',
         };
       }
+      return R.validateReceipt(receipt);
     },
   };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -21,6 +21,9 @@
   // ---------- story player ----------
   R.Story = class {
     constructor(host, slides, { onClose, duration = 7000 } = {}) {
+      R.Story.active?.destroy();
+      R.Story.active = this;
+      this.closed = false;
       this.host = host; this.slides = slides; this.onClose = onClose; this.duration = duration;
       this.i = -1; this.elapsed = 0; this.paused = false;
       this.el = document.createElement('div');
@@ -63,6 +66,8 @@
     }
     setPaused(p, hold) { this.paused = p; this.el.classList.toggle('is-paused', p && !hold); }
     tick(now) {
+      if (this.closed) return;
+      if (!this.el.isConnected) return this.destroy();
       const dt = now - this.last; this.last = now;
       const s = this.slides[this.i];
       if (!this.paused && s && !s.hold) {
@@ -71,12 +76,14 @@
         this.barEls[this.i].querySelector('i').style.width = Math.min(100, (this.elapsed / d) * 100) + '%';
         if (this.elapsed >= d) this.next();
       }
-      this.raf = requestAnimationFrame(this.tick.bind(this));
+      if (!this.closed) this.raf = requestAnimationFrame(this.tick.bind(this));
     }
     go(i) {
+      if (this.closed) return;
       if (i < 0) i = 0;
       if (i >= this.slides.length) return this.close();
       const prevEl = this.slideEls[this.i];
+      this.slides[this.i]?.onExit?.();
       if (prevEl) prevEl.classList.remove('active');
       this.i = i; this.elapsed = 0;
       this.barEls.forEach((b, j) => { b.classList.toggle('done', j < i); b.querySelector('i').style.width = j < i ? '100%' : '0'; });
@@ -90,12 +97,17 @@
     }
     next() { this.go(this.i + 1); }
     prev() { this.go(this.i - 1); }
-    close() {
+    destroy() { this.close({ notify: false, immediate: true }); }
+    close({ notify = true, immediate = false } = {}) {
+      if (this.closed) return;
+      this.closed = true;
+      if (R.Story.active === this) R.Story.active = null;
       cancelAnimationFrame(this.raf);
       document.removeEventListener('keydown', this.onKey);
+      this.slides[this.i]?.onExit?.();
       this.el.style.transition = 'opacity .25s'; this.el.style.opacity = 0;
-      setTimeout(() => this.el.remove(), 250);
-      if (this.onClose) this.onClose();
+      if (immediate) this.el.remove(); else setTimeout(() => this.el.remove(), 250);
+      if (notify && this.onClose) this.onClose();
     }
   };
 
@@ -106,6 +118,7 @@
       n.textContent = pre + (0).toFixed(dp) + suf;
       const t0 = performance.now() + delay;
       const step = (now) => {
+        if (!n.isConnected) return;
         const p = Math.max(0, Math.min(1, (now - t0) / dur));
         const e = 1 - Math.pow(1 - p, 4);
         n.textContent = pre + (to * e).toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp }) + suf;
@@ -122,6 +135,7 @@
     node.innerHTML = '<span></span><i class="caret"></i>';
     const span = node.firstChild; let i = 0;
     const iv = setInterval(() => {
+      if (!node.isConnected) return clearInterval(iv);
       i += 2; span.textContent = text.slice(0, i);
       if (i >= text.length) { clearInterval(iv); }
     }, 28);
@@ -173,11 +187,11 @@
         <div class="big r">your top categories</div>
         <div class="cat-bars r">${top5.map((c) => `<div class="cb">
           <div class="lbl"><span>${R.CATEGORIES[c.cat].emoji} ${esc(c.cat)}</span><span class="num">${money(c.amt, 0)}</span></div>
-          <div class="track"><i data-w="${(c.amt / top5[0].amt) * 100}%" style="background:${R.CATEGORIES[c.cat].color}"></i></div></div>`).join('')}</div>`,
+          <div class="track"><i data-w="${top5[0].amt > 0 ? (c.amt / top5[0].amt) * 100 : 0}%" style="background:${R.CATEGORIES[c.cat].color}"></i></div></div>`).join('')}</div>`,
     });
 
     const tm = a.byMerchant.slice(0, 5);
-    S.push({
+    if (tm.length) S.push({
       bg: 'var(--orange)', fg: '#0a0a0c', duration: 8000,
       shapes: [['star', 140, 6, 68, 'var(--yellow)', 'spin'], ['circle', 220, 78, 50, '#0a0a0c', 'enter']],
       html: `<div class="eyebrow r">your top merchants</div>
@@ -247,12 +261,14 @@
       shapes: [['blob', 210, 86, -16, 'var(--orange)', 'morph'], ['blob', 160, -4, 70, 'var(--red)', 'morph']],
       html: `<div class="eyebrow r">we asked ✨${R.gemini.enabled ? 'Gemini' : 'the roast bot'} to roast you 🔥</div>
         <div class="roast-text r"><span class="dots"><span></span><span></span><span></span></span></div>`,
-      onEnter: async (el) => {
+      onEnter: async (el, story) => {
         const node = $('.roast-text', el);
         if (stopType) stopType();
         if (!roastText) roastText = await R.ai.roast(a, name);
+        if (story.closed || story.slideEls[story.i] !== el) return;
         stopType = typewriter(node, roastText);
       },
+      onExit: () => { if (stopType) stopType(); stopType = null; },
     });
 
     S.push({
@@ -305,7 +321,26 @@
     s: a.score.score, g: a.score.grade, p: Math.round(a.prediction), nx: a.nextLabel,
   });
 
+  // Share URLs are untrusted. Keep optional merchant stats optional for subscription-only months.
+  R.validateSummary = (d) => {
+    if (!d || typeof d !== 'object' || Array.isArray(d)) throw new Error('Invalid summary');
+    const string = (key, optional = false) => {
+      if (optional && d[key] === undefined) return;
+      if (typeof d[key] !== 'string' || d[key].length > 200) throw new Error('Invalid summary');
+    };
+    const number = (key, min, max = Infinity, optional = false) => {
+      if (optional && d[key] === undefined) return;
+      if (typeof d[key] !== 'number' || !Number.isFinite(d[key]) || d[key] < min || d[key] > max) throw new Error('Invalid summary');
+    };
+    ['n', 'm', 'au', 'g', 'nx'].forEach((k) => string(k));
+    ['c', 'tm', 'vm'].forEach((k) => string(k, true));
+    number('t', 0); number('d', -100); number('p', 0); number('s', 0, 100); number('v', 0, Infinity, true);
+    if (!Object.hasOwn(R.AURAS, d.au) || (d.c !== undefined && !Object.hasOwn(R.CATEGORIES, d.c)) || !['A', 'B', 'C', 'D', 'F'].includes(d.g)) throw new Error('Invalid summary');
+    return d;
+  };
+
   R.summaryCard = (d) => {
+    R.validateSummary(d);
     const aura = R.AURAS[d.au] || R.AURAS.Other;
     return `<div class="summary" style="background:linear-gradient(150deg, ${aura.grad[0]}, ${aura.grad[1]})">
       ${shapes([['circle', 160, -20, 62, 'rgba(255,255,255,.35)'], ['star', 54, 4, 86, 'rgba(10,10,12,.85)', 'spin']])}
@@ -314,9 +349,9 @@
       <div class="sgrid">
         <div><small>Spent</small><b class="num">$${(+d.t).toLocaleString()}</b></div>
         <div><small>vs last month</small><b>${d.d >= 0 ? '+' : ''}${d.d}%</b></div>
-        <div><small>Top category</small><b>${R.CATEGORIES[d.c]?.emoji || ''} ${esc(d.c)}</b></div>
-        <div><small>Top merchant</small><b>${esc(d.tm)}</b></div>
-        <div><small>On repeat</small><b>${esc(d.vm)} ×${d.v}</b></div>
+        <div><small>Top category</small><b>${R.CATEGORIES[d.c]?.emoji || ''} ${esc(d.c || 'No spending')}</b></div>
+        <div><small>Top merchant</small><b>${esc(d.tm || 'None this month')}</b></div>
+        <div><small>On repeat</small><b>${d.vm && d.v !== undefined ? `${esc(d.vm)} ×${d.v}` : '—'}</b></div>
         <div><small>Health score</small><b>${d.s}/100 · ${esc(d.g)}</b></div>
       </div>
       <div class="foot"><span>${esc(d.nx)} prediction: $${(+d.p).toLocaleString()}</span><span>receipts.</span></div>
@@ -325,6 +360,7 @@
 
   // ---------- share image (1080x1920 PNG) ----------
   R.shareImage = function (d) {
+    R.validateSummary(d);
     const aura = R.AURAS[d.au] || R.AURAS.Other;
     const W = 1080, H = 1920;
     const c = document.createElement('canvas'); c.width = W; c.height = H;
@@ -348,7 +384,7 @@
     g.fillText(line, 90, y);
     const stats = [
       ['SPENT', '$' + (+d.t).toLocaleString()], ['VS LAST MONTH', (d.d >= 0 ? '+' : '') + d.d + '%'],
-      ['TOP CATEGORY', d.c], ['TOP MERCHANT', d.tm], ['ON REPEAT', `${d.vm} ×${d.v}`], ['HEALTH SCORE', `${d.s}/100 · ${d.g}`],
+      ['TOP CATEGORY', d.c || 'No spending'], ['TOP MERCHANT', d.tm || 'None this month'], ['ON REPEAT', d.vm && d.v !== undefined ? `${d.vm} ×${d.v}` : '—'], ['HEALTH SCORE', `${d.s}/100 · ${d.g}`],
     ];
     stats.forEach(([k, v], i) => {
       const x = 90 + (i % 2) * 460; const yy = y + 200 + Math.floor(i / 2) * 210;
