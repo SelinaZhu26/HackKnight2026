@@ -256,16 +256,29 @@
       throw error;
     }
     const txns = [];
+    const income = [];
+    // Money in (paychecks, Venmo, refunds) is kept separately for net = earned - spent.
+    // Moving money between your own accounts isn't income, so transfers and card payments are left out.
+    const addIncome = (r, value) => {
+      const desc = (r[iDesc] || '').replace(/\s{2,}/g, ' ');
+      const parsedDate = R.parseTransactionDate(r[iDate]);
+      if (!parsedDate || !(value > 0) || /transfer (from|to)|online transfer|payment,? thank you|autopay|card payment/i.test(desc)) return;
+      const source = desc.replace(/\b(payroll|dir(ect)?\s*dep(osit)?|ach( credit)?|ppd id.*|deposit)\b/gi, ' ').replace(/\s{2,}/g, ' ').trim() || desc;
+      income.push({ ...parsedDate, source: R.prettyMerchant(source), amount: +value.toFixed(2) });
+    };
     for (const r of rows) {
       let amt;
       if (iDebit >= 0) {
         amt = amount(r[iDebit]);
-        if (!Number.isFinite(amt) || amt <= 0 || typeOf(r) === 'credit' || (Number.isFinite(amount(r[iCredit])) && amount(r[iCredit]) !== 0)) continue;
+        const credit = amount(r[iCredit]);
+        if (Number.isFinite(credit) && credit !== 0) { addIncome(r, Math.abs(credit)); continue; }
+        if (typeOf(r) === 'credit') { addIncome(r, Math.abs(amt)); continue; }
+        if (!Number.isFinite(amt) || amt <= 0) continue;
       } else {
         amt = amount(r[iAmt]);
         if (!Number.isFinite(amt) || amt === 0) continue;
         const type = typeOf(r);
-        if (type === 'credit' || (!type && (spendingSign === 'negative' ? amt >= 0 : amt <= 0))) continue;
+        if (type === 'credit' || (!type && (spendingSign === 'negative' ? amt >= 0 : amt <= 0))) { addIncome(r, Math.abs(amt)); continue; }
         amt = Math.abs(amt);
       }
       const parsedDate = R.parseTransactionDate(r[iDate]);
@@ -281,6 +294,7 @@
     detectRecurring(txns);
     txns.sort((a, b) => a.date.localeCompare(b.date));
     txns.meta = { rows: rows.length, skipped: rows.length - txns.length };
+    txns.income = income.sort((a, b) => a.date.localeCompare(b.date));
     return txns;
   };
 

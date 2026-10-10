@@ -284,7 +284,7 @@
     }
 
     function go() {
-      S.csvTxns = [...txns]; S.source = 'csv'; save();
+      S.csvTxns = [...txns]; S.csvIncome = txns.income || []; S.source = 'csv'; save();
       closeImporter();
       if (fromWelcome) return finishOnboarding('csv');
       recompute(); cal.month = null;
@@ -371,7 +371,7 @@
   }
 
   // ---------- shell ----------
-  const TABS = [['home', '🧾', 'Wrapped'], ['learn', '🎓', 'Learn'], ['friends', '👯', 'Friends'], ['squads', '🤝', 'Squads'], ['roasts', '🔥', 'Roasts']];
+  const TABS = [['home', '🧾', 'Wrapped'], ['future', '🔮', 'Future'], ['learn', '🎓', 'Learn'], ['friends', '👯', 'Friends'], ['squads', '🤝', 'Squads'], ['roasts', '🔥', 'Roasts']];
   function renderShell(page) {
     if (!TABS.some((t) => t[0] === page)) page = 'home';
     phone.innerHTML = `
@@ -380,13 +380,18 @@
       <main class="screen" id="screen"></main>
       <nav class="tabbar">${TABS.map(([id, ic, lb]) => `<a class="tab ${id === page ? 'on' : ''}" href="#/${id}"><span>${ic}</span>${lb}</a>`).join('')}</nav>`;
     const screen = $('#screen', phone);
-    ({ home: renderHome, learn: renderLearn, friends: renderFriends, squads: renderSquads, roasts: renderRoasts })[page](screen);
+    ({ home: renderHome, future: renderFuture, learn: renderLearn, friends: renderFriends, squads: renderSquads, roasts: renderRoasts })[page](screen);
   }
 
   // ---------- LEARN (js/learn.js) ----------
   function renderLearn(el) {
     R.learn.render(el, { phone, toast, sheet, closeSheet, name: displayName, rerender: () => (location.hash === '#/learn' ? route() : (location.hash = '#/learn')) });
   }
+
+  // ---------- FUTURE (js/forecast.js + js/future.js) ----------
+  const myIncome = () => (S.source === 'csv' ? S.csvIncome || [] : R.forecast.demoIncome());
+  const futureCtx = () => ({ phone, toast, sheet, closeSheet, name: displayName, txns: myTxns, income: myIncome });
+  function renderFuture(el) { R.future.render(el, futureCtx()); }
 
   // ---------- HOME ----------
   function renderHome(el) {
@@ -396,6 +401,7 @@
     el.innerHTML = `
       <h1 class="title">${esc(a.monthLabel)}<br><span class="muted">receipts</span></h1>
       ${R.learn.homeCard()}
+      ${R.future.homeCard(futureCtx())}
       <div class="hero" data-act="play">
         <div class="shape blob" style="width:220px;height:220px;top:-50px;right:-50px;background:var(--pink);animation:morph 8s ease-in-out infinite alternate"></div>
         <div class="shape star" style="width:64px;height:64px;bottom:26px;right:28px;background:var(--lime);animation:spin 16s linear infinite"></div>
