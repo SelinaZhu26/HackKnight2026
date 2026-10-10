@@ -28,7 +28,7 @@
   let A = {}; // analysis per person id
   let PEOPLE = [];
   function recompute() {
-    const mine = [...(S.source === 'csv' && S.csvTxns ? S.csvTxns : DATA.me), ...S.extraTxns];
+    const mine = myTxns();
     A = {};
     PEOPLE = R.PEOPLE.map((p) => {
       const person = p.id === 'me' ? { ...p, name: displayName(), budget: S.budget } : p;
@@ -39,6 +39,7 @@
     if (!S.squads) S.squads = DEFAULT_SQUADS;
     if (!S.feed) S.feed = seedFeed();
   }
+  const myTxns = () => [...(S.source === 'csv' && S.csvTxns ? S.csvTxns : DATA.me), ...S.extraTxns];
   const displayName = () => S.name.trim() || 'You';
   const personById = (id) => PEOPLE.find((p) => p.person.id === id);
   const nameOf = (id) => (id === 'me' ? displayName() : personById(id)?.person.name || id);
@@ -227,6 +228,9 @@
           <button class="btn dark sm" style="margin-top:12px" data-act="challenge">challenge accepted 🤝</button>`}
       </div>
 
+      <div class="section-h"><h3>calendar</h3><small>tap a day</small></div>
+      <div class="card cal" id="cal"></div>
+
       <div class="section-h"><h3>health score</h3><small>${esc(a.score.vibe)}</small></div>
       <div class="card score-card">
         <div class="ring"><svg width="104" height="104"><circle cx="52" cy="52" r="44" stroke="var(--surface-2)" stroke-width="12" fill="none"/>
@@ -253,13 +257,71 @@
         <div class="grow"><b>${esc(t.merchant)}</b><small>${new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}${t.noTime ? '' : ' · ' + new Date(t.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</small></div>
         <div style="text-align:right"><div class="amt num">${money(t.amount)}</div><button class="roast-it" data-act="roastTxn" data-i="${i}">🔥 roast</button></div></div>`).join('')}</div>
       <button class="btn block ghost" style="margin-top:12px" data-act="gmail">📧 add a receipt from email</button>`;
+    renderCalendar();
     requestAnimationFrame(() => setTimeout(() => {
       el.querySelectorAll('[data-off]').forEach((c) => (c.style.strokeDashoffset = c.dataset.off));
       el.querySelectorAll('[data-w]').forEach((b) => (b.style.width = b.dataset.w));
     }, 80));
   }
+  // ---------- spending calendar ----------
+  const pad2 = (n) => String(n).padStart(2, '0');
+  const localKey = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
+  let cal = { month: null, day: null };
+  function renderCalendar() {
+    const box = $('#cal'); if (!box) return;
+    const txns = myTxns();
+    const months = [...new Set(txns.map((t) => localKey(new Date(t.date))))].sort();
+    if (!months.includes(cal.month)) { cal.month = A.me.month; cal.day = null; }
+    const [y, m] = cal.month.split('-').map(Number);
+    const nd = new Date(y, m, 0).getDate();
+    const lead = new Date(y, m - 1, 1).getDay();
+    const days = Array.from({ length: nd + 1 }, () => ({ amt: 0, txns: [] }));
+    for (const t of txns) {
+      const d = new Date(t.date);
+      if (localKey(d) !== cal.month) continue;
+      days[d.getDate()].amt += t.amount; days[d.getDate()].txns.push(t);
+    }
+    const max = Math.max(1, ...days.map((d) => d.amt));
+    const spendDays = days.slice(1).filter((d) => d.amt > 0).length;
+    const peak = days.reduce((best, d, i) => (i && d.amt > (days[best]?.amt || 0) ? i : best), 1);
+    if (cal.day === null || cal.day > nd) cal.day = peak;
+    const total = days.reduce((s, d) => s + d.amt, 0);
+    const mi = months.indexOf(cal.month);
+    const today = new Date();
+    const cells = [];
+    for (let i = 0; i < lead; i++) cells.push('<div></div>');
+    for (let d = 1; d <= nd; d++) {
+      const amt = days[d].amt;
+      const k = amt ? 0.14 + 0.86 * Math.pow(amt / max, 0.7) : 0;
+      const isToday = localKey(today) === cal.month && today.getDate() === d;
+      cells.push(`<button class="cal-d ${d === cal.day ? 'sel' : ''} ${isToday ? 'today' : ''} ${k > 0.55 ? 'hot' : ''}" data-act="calDay" data-d="${d}"
+        style="${amt ? `background:rgba(198,255,61,${k.toFixed(2)})` : ''}" aria-label="${R.monthLabel(cal.month)} ${d}: ${money(amt)}">
+        <b>${d}</b><small>${amt ? (amt >= 100 ? '$' + Math.round(amt) : money(amt, 0)) : '·'}</small></button>`);
+    }
+    const sel = days[cal.day];
+    const selDate = new Date(y, m - 1, cal.day);
+    box.innerHTML = `
+      <div class="cal-head">
+        <button class="icon-btn sm" data-act="calNav" data-dir="-1" ${mi <= 0 ? 'disabled' : ''} aria-label="previous month"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <div style="text-align:center"><b>${R.monthLabel(cal.month)} ${y}</b><small>${money(total, 0)} · ${spendDays} spend days · ${nd - spendDays} no-spend</small></div>
+        <button class="icon-btn sm" data-act="calNav" data-dir="1" ${mi >= months.length - 1 ? 'disabled' : ''} aria-label="next month"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+      </div>
+      <div class="cal-grid">${['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((w) => `<span class="cal-w">${w}</span>`).join('')}${cells.join('')}</div>
+      <div class="cal-legend"><span>less</span>${[0.14, 0.4, 0.7, 1].map((a) => `<i style="background:rgba(198,255,61,${a})"></i>`).join('')}<span>more</span></div>
+      <div class="cal-detail">
+        <div class="row" style="justify-content:space-between;margin-bottom:4px">
+          <b>${selDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</b>
+          <b class="num" style="color:var(--lime)">${money(sel.amt)}</b>
+        </div>
+        ${sel.txns.length ? sel.txns.sort((a, b) => a.date.localeCompare(b.date)).map((t) => `<div class="txn"><div class="ic">${R.CATEGORIES[t.category]?.emoji || '🧾'}</div>
+          <div class="grow"><b>${esc(t.merchant)}</b><small>${esc(t.category)}${t.noTime ? '' : ' · ' + new Date(t.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</small></div>
+          <div class="amt num">${money(t.amount)}</div></div>`).join('')
+          : '<p class="muted" style="padding:10px 0;font-size:14px">no-spend day ✨ your wallet got to rest.</p>'}
+      </div>`;
+  }
+
   const recentTxns = () => {
-    const all = [...(S.source === 'csv' && S.csvTxns ? S.csvTxns : DATA.me), ...S.extraTxns].filter((t) => !t.recurring);
+    const all = myTxns().filter((t) => !t.recurring);
     return all.sort((x, y) => y.date.localeCompare(x.date)).slice(0, 10);
   };
 
@@ -550,6 +612,12 @@
       (sh) => { $('#jcGo', sh).onclick = () => { const c = $('#jc', sh).value; closeSheet(); joinSquad(c); }; });
     else if (act === 'invSquad') { copy(`${baseUrl()}#/join/${t.dataset.code}`); toast(`invite copied · code ${t.dataset.code}`); }
     else if (act === 'confess') confessSheet();
+    else if (act === 'calDay') { cal.day = +t.dataset.d; renderCalendar(); }
+    else if (act === 'calNav') {
+      const months = [...new Set(myTxns().map((x) => localKey(new Date(x.date))))].sort();
+      const next = months[months.indexOf(cal.month) + +t.dataset.dir];
+      if (next) { cal.month = next; cal.day = null; renderCalendar(); }
+    }
     else if (act === 'react') {
       const p = S.feed.find((x) => x.id === t.closest('.post').dataset.id); const em = t.dataset.e;
       p.mine[em] = !p.mine[em]; save();

@@ -219,6 +219,30 @@ textarea.input { height: 140px; padding: 14px 16px; resize: none; font-size: 14p
 .plan .step p { font-size: 13px; color: var(--muted); }
 .plan .step .save { color: var(--lime); font-weight: 800; font-size: 13px; white-space: nowrap; }
 
+/* calendar */
+.cal { padding: 14px; }
+.cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.cal-head b { display: block; font-size: 17px; font-weight: 800; }
+.cal-head small { color: var(--muted); font-size: 12px; }
+.icon-btn.sm { width: 34px; height: 34px; font-size: 22px; font-weight: 800; line-height: 1; background: var(--surface-2); }
+.icon-btn:disabled { opacity: 0.3; cursor: default; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-w { text-align: center; font-size: 11px; font-weight: 700; color: var(--muted); padding-bottom: 4px; }
+.cal-d {
+  aspect-ratio: 1; border-radius: 10px; background: var(--surface-2);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.cal-d b { font-size: 13px; font-weight: 800; line-height: 1; }
+.cal-d small { font-size: 9px; font-weight: 700; opacity: 0.75; font-variant-numeric: tabular-nums; }
+.cal-d.hot { color: #0a0a0c; }
+.cal-d:hover { transform: scale(1.06); }
+.cal-d.sel { box-shadow: 0 0 0 2px #fff; transform: scale(1.06); }
+.cal-d.today b { text-decoration: underline 2px; text-underline-offset: 2px; }
+.cal-legend { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 10px; font-size: 11px; color: var(--muted); }
+.cal-legend i { width: 12px; height: 12px; border-radius: 3px; }
+.cal-detail { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+
 /* ---------- friends ---------- */
 .hscroll { display: flex; gap: 12px; overflow-x: auto; margin: 0 -16px; padding: 2px 16px 6px; scroll-snap-type: x mandatory; scrollbar-width: none; }
 .hscroll::-webkit-scrollbar { display: none; }
