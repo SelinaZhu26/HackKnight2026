@@ -6,7 +6,7 @@ const path = require('node:path');
 const { chromium } = require('playwright');
 
 const root = path.join(__dirname, '..');
-const files = ['index.html', 'styles.css', ...['data', 'analytics', 'gemini', 'wrapped', 'app'].map((s) => `js/${s}.js`)];
+const files = ['index.html', 'styles.css', ...['data', 'analytics', 'gemini', 'wrapped', 'curriculum', 'voice', 'learn', 'app'].map((s) => `js/${s}.js`)];
 const server = http.createServer(async (req, res) => {
   const file = req.url === '/' ? 'index.html' : req.url.slice(1);
   if (!files.includes(file)) { res.writeHead(404); res.end(); return; }

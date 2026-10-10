@@ -110,17 +110,15 @@
       <div class="connect">
         <button data-act="demo"><span class="em">🏦</span><span><b>Connect bank</b><small>demo account · 3 months of data</small></span></button>
         <button data-act="gmail" class="secondary"><span class="em">📧</span><span><b>Scan Gmail receipts</b><small>MCP server + Gemini reads your order emails</small></span></button>
-        <button data-act="csv" class="secondary"><span class="em">📄</span><span><b>Upload bank CSV</b><small>Chase, BofA, Capital One, etc.</small></span></button>
+        <button data-act="csv" class="secondary"><span class="em">📄</span><span><b>Upload bank statement</b><small>CSV from any bank · or try a sample</small></span></button>
       </div>
-      <input type="file" id="csvfile" accept=".csv,text/csv" hidden>
       <div class="fine">demo build for hack knight · everything stays in your browser</div>
     </div>`;
     const nm = $('#nm', phone);
     nm.addEventListener('input', () => { S.name = nm.value; save(); });
     phone.querySelector('[data-act=demo]').onclick = () => finishOnboarding('demo');
     phone.querySelector('[data-act=gmail]').onclick = () => openGmailScan(true);
-    phone.querySelector('[data-act=csv]').onclick = () => $('#csvfile', phone).click();
-    $('#csvfile', phone).onchange = (e) => handleCSV(e.target.files[0], true);
+    phone.querySelector('[data-act=csv]').onclick = () => openImporter({ fromWelcome: true });
   }
   function finishOnboarding(source) {
     S.source = source === 'csv' ? 'csv' : 'demo';
@@ -130,31 +128,196 @@
     if (!join) setTimeout(playSolo, 350);
   }
 
-  async function handleCSV(file, fromWelcome) {
-    if (!file) return;
-    try {
-      const text = await file.text();
-      const importCSV = (spendingSign) => {
-        const txns = R.parseCSV(text, { spendingSign });
-        S.csvTxns = txns; S.source = 'csv'; save();
-        toast(`imported ${txns.length} transactions 🧾`);
-        if (fromWelcome) finishOnboarding('csv'); else { recompute(); route(); }
+  // ---------- CSV import flow: drop -> reading -> review -> wrapped ----------
+  const BANKS = ['Chase', 'BofA', 'Capital One', 'Amex', 'Discover', 'Wells Fargo', 'Apple Card', 'Chime', 'Citi'];
+  const QUIPS = ['counting the starbucks runs ☕', 'spotting the 2am purchases 🌙', 'finding subscriptions you forgot 👻',
+    'judging your doordash habit 🛵', 'sorting the chaos into categories 🗂️', 'ignoring your paychecks (we only roast spending) 💸'];
+  const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const monthRange = (txns) => {
+    const ks = [...new Set(txns.map((t) => localKey(new Date(t.date))))].sort();
+    const lb = (k) => R.monthLabel(k).slice(0, 3);
+    return { n: ks.length, label: ks.length > 1 ? `${lb(ks[0])}–${lb(ks[ks.length - 1])}` : lb(ks[0]) };
+  };
+
+  function openImporter({ fromWelcome = false, file = null, sample = false } = {}) {
+    closeImporter();
+    const el = document.createElement('div'); el.className = 'importer'; phone.appendChild(el);
+    let csvText = '', fileName = '', sign = null, txns = null;
+
+    const close = () => closeImporter();
+    const steps = (n) => `<div class="imp-top"><button class="icon-btn" data-imp="back" aria-label="back">←</button>
+      <div class="imp-steps">${[1, 2, 3].map((i) => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}</div><span class="imp-count">${n}/3</span></div>`;
+
+    function drop() {
+      el.innerHTML = `${steps(1)}
+        <div class="shape circle" style="width:220px;height:220px;top:-70px;right:-80px;background:var(--purple);opacity:.55;animation:float 7s ease-in-out infinite alternate"></div>
+        <div class="imp-body">
+          <div class="kicker">bring your own receipts</div>
+          <h2 class="imp-h">show us the statement 👀</h2>
+          <p class="imp-sub">drop a bank CSV and we’ll turn it into your wrapped. no login, no linking, no drama.</p>
+          <label class="dropzone" id="dz" tabindex="0">
+            <input type="file" accept=".csv,text/csv" hidden id="impFile">
+            <div class="dz-em">📄</div>
+            <b class="dz-t">drag your CSV here</b>
+            <small class="dz-s">or tap to pick a file</small>
+          </label>
+          <button class="sample-btn" data-imp="sample"><span class="em">⚡</span><span class="grow"><b>no CSV? use a sample statement</b><small>3 months of a very real college student</small></span><span class="arrow">→</span></button>
+          <div class="banks"><small>works with</small>${BANKS.map((b) => `<span>${b}</span>`).join('')}<span>+ most banks</span></div>
+          <details class="howto"><summary>how do I get my CSV? 🤔</summary>
+            <ol><li>open your bank’s <b>website</b> (the app usually can’t export, sadly)</li>
+              <li>go to <b>activity</b> or <b>statements</b> → <b>download</b> / <b>export</b></li>
+              <li>pick <b>CSV</b> and the last <b>3 months</b>. more months = spicier wrapped</li></ol>
+            <button class="link" data-imp="download">download the sample CSV to see the format ⬇</button>
+          </details>
+          <p class="imp-fine">🔒 parsed on your device. nothing gets uploaded, not even to us.</p>
+        </div>`;
+      const dz = $('#dz', el); const inp = $('#impFile', el);
+      inp.onchange = () => inp.files[0] && readFile(inp.files[0]);
+      dz.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inp.click(); } };
+      let depth = 0;
+      dz.ondragenter = (e) => { e.preventDefault(); depth++; dz.classList.add('over'); $('.dz-t', dz).textContent = 'yesss drop it 🫳'; };
+      dz.ondragleave = () => { if (--depth <= 0) { depth = 0; dz.classList.remove('over'); $('.dz-t', dz).textContent = 'drag your CSV here'; } };
+      dz.ondragover = (e) => e.preventDefault();
+      dz.ondrop = (e) => { e.preventDefault(); dz.classList.remove('over'); const f = e.dataTransfer.files[0]; if (f) readFile(f); };
+    }
+
+    async function readFile(f) {
+      if (!/\.csv$/i.test(f.name) && !/csv|text\/plain/.test(f.type)) return toast('that’s not a CSV bestie 🙅');
+      try { csvText = await f.text(); fileName = f.name; sign = null; parse(true); }
+      catch { toast('couldn’t read that file 😵'); }
+    }
+    function useSample() { csvText = R.buildSampleCSV(); fileName = 'sample-statement.csv'; sign = null; parse(true); }
+
+    function parse(animate) {
+      try {
+        try { txns = R.parseCSV(csvText); sign = null; }
+        catch (e) {
+          if (e.code !== 'CSV_SIGN_REQUIRED') throw e;
+          sign = sign || R.guessSpendingSign(csvText);
+          txns = R.parseCSV(csvText, { spendingSign: sign });
+        }
+      } catch (e) { return fail(e.message); }
+      animate ? reading() : review();
+    }
+
+    function fail(msg) {
+      el.innerHTML = `${steps(1)}<div class="imp-body imp-center">
+        <div class="dz-em big">😵‍💫</div><h2 class="imp-h">ok that CSV is giving… nothing</h2>
+        <p class="imp-sub">${/^Need columns/.test(msg) ? '' : esc(msg.toLowerCase()) + '. '}we need columns like <b>Date</b>, <b>Description</b> and <b>Amount</b> (or Debit/Credit).</p>
+        <button class="btn block" data-imp="retry">try another file</button>
+        <button class="btn block ghost" data-imp="sample" style="margin-top:10px">⚡ use the sample instead</button></div>`;
+    }
+
+    function reading() {
+      const preview = txns.filter((t, i) => i % Math.max(1, Math.floor(txns.length / 7)) === 0).slice(-7);
+      el.innerHTML = `${steps(2)}<div class="imp-body">
+        <div class="kicker">${esc(fileName)}</div>
+        <h2 class="imp-h">reading your receipts…</h2>
+        <div class="read-meter"><i id="rm"></i></div>
+        <div class="read-row"><span class="spinner"></span><span id="quip">${QUIPS[0]}</span><b class="num" id="rc">0</b></div>
+        <div class="scan-list" id="rl"></div></div>`;
+      const rm = $('#rm', el), rc = $('#rc', el), rl = $('#rl', el), quip = $('#quip', el);
+      const dur = reduceMotion() ? 500 : 2600; const t0 = performance.now(); let shown = 0;
+      const tick = (now) => {
+        if (!el.isConnected) return;
+        const p = Math.min(1, (now - t0) / dur);
+        rm.style.width = `${p * 100}%`;
+        rc.textContent = Math.round(p * txns.length);
+        quip.textContent = QUIPS[Math.min(QUIPS.length - 1, Math.floor(p * QUIPS.length))];
+        while (shown < Math.ceil(p * preview.length)) {
+          const t = preview[shown++]; const c = R.CATEGORIES[t.category] || R.CATEGORIES.Other;
+          rl.insertAdjacentHTML('afterbegin', `<div class="scan-item"><span style="font-size:20px">${c.emoji}</span>
+            <div><b>${esc(t.merchant)}</b><small>${new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</small></div>
+            <span class="cat-tag" style="--c:${c.color}">${esc(t.category)}</span><span class="num amt-s">${money(t.amount)}</span></div>`);
+        }
+        if (p < 1) requestAnimationFrame(tick); else setTimeout(() => el.isConnected && review(), reduceMotion() ? 0 : 350);
       };
-      try { importCSV(); } catch (e) {
-        if (e.code !== 'CSV_SIGN_REQUIRED') throw e;
-        sheet(`<h3>which amounts are purchases?</h3>
-          <p class="sub">Check a purchase in your statement and choose its sign. Amount-only CSVs use different conventions; the other sign will be excluded as income or refunds.</p>
-          <div class="field"><label for="csvSign">spending amounts</label><select class="input" id="csvSign">
-            <option value="negative">negative (e.g. -6.45)</option><option value="positive">positive (e.g. 6.45)</option></select></div>
-          <button class="btn block" id="csvImport">import purchases</button>`, (sh) => {
-          $('#csvImport', sh).onclick = () => {
-            try { const sign = $('#csvSign', sh).value; closeSheet(); importCSV(sign); }
-            catch (err) { toast('hmm: ' + err.message); }
-          };
-        });
+      requestAnimationFrame(tick);
+    }
+
+    function review() {
+      const total = txns.reduce((s, t) => s + t.amount, 0);
+      const range = monthRange(txns);
+      const byCat = Object.entries(txns.reduce((m, t) => ((m[t.category] = (m[t.category] || 0) + t.amount), m), {})).sort((a, b) => b[1] - a[1]);
+      const merchants = Object.values(txns.reduce((m, t) => {
+        const g = (m[t.merchant] ||= { name: t.merchant, cat: t.category, amt: 0, n: 0 }); g.amt += t.amount; g.n++; return m;
+      }, {})).sort((a, b) => b.amt - a.amt);
+      const unsorted = merchants.filter((m) => m.cat === 'Other');
+      const top = merchants.filter((m) => m.cat !== 'Other').slice(0, 5);
+      const mRow = (m) => `<div class="m-row"><div class="ic">${R.CATEGORIES[m.cat].emoji}</div>
+        <div class="grow"><b>${esc(m.name)}</b><small>${m.n}× · ${money(m.amt, 0)}</small></div>
+        <button class="cat-tag" style="--c:${R.CATEGORIES[m.cat].color}" data-imp="recat" data-m="${esc(m.name)}">${esc(m.cat)} ✎</button></div>`;
+      el.innerHTML = `${steps(3)}<div class="imp-body">
+        <div class="kicker">${esc(fileName)}</div>
+        <h2 class="imp-h">the receipts are in 🧾</h2>
+        <div class="tiles">
+          <div class="tile lime"><b class="num">${txns.length}</b><small>purchases</small></div>
+          <div class="tile pink"><b class="num">${money(total, 0)}</b><small>spent total</small></div>
+          <div class="tile purple"><b>${range.label}</b><small>${range.n} month${range.n > 1 ? 's' : ''}</small></div>
+        </div>
+        ${txns.meta?.skipped ? `<p class="imp-note">💸 skipped ${txns.meta.skipped > 1 ? `${txns.meta.skipped} deposits & refunds` : '1 deposit or refund'}. we only roast spending.</p>` : ''}
+        ${range.n < 2 ? `<p class="imp-note warn">only 1 month found. add 2–3 months to unlock “vs last month” + predictions 🔮</p>` : ''}
+        ${sign ? `<div class="sign-row"><span>purchases show up as</span><div class="seg">
+          <button class="${sign === 'negative' ? 'on' : ''}" data-imp="sign" data-v="negative">−6.45</button>
+          <button class="${sign === 'positive' ? 'on' : ''}" data-imp="sign" data-v="positive">+6.45</button></div></div>` : ''}
+        <div class="stack">${byCat.map(([c, v]) => `<i style="flex:${v};background:${R.CATEGORIES[c].color}" title="${esc(c)}"></i>`).join('')}</div>
+        <div class="legend">${byCat.slice(0, 6).map(([c, v]) => `<span><i style="background:${R.CATEGORIES[c].color}"></i>${R.CATEGORIES[c].emoji} ${esc(c)} <b class="num">${Math.round((v / total) * 100)}%</b></span>`).join('')}</div>
+        ${unsorted.length ? `<div class="section-h"><h3>we couldn’t place these 🤷</h3><small>tap to sort</small></div>
+          <div class="card m-list">${unsorted.slice(0, 8).map(mRow).join('')}</div>`
+        : `<p class="imp-note good">we sorted every single purchase. we’re kinda good at this 💅</p>`}
+        <div class="section-h"><h3>your top spots</h3><small>wrong? tap to fix</small></div>
+        <div class="card m-list">${top.map(mRow).join('')}</div>
+        <div class="imp-cta"><button class="btn block" data-imp="go">generate my wrapped ✨</button>
+          <button class="link" data-imp="retry">use a different file</button></div></div>`;
+    }
+
+    function recat(name) {
+      const cur = txns.find((t) => t.merchant === name)?.category;
+      sheet(`<h3>${esc(name)} is…</h3><p class="sub">we’ll apply it to every ${esc(name)} purchase.</p>
+        <div class="cat-grid">${Object.entries(R.CATEGORIES).map(([c, v]) => `<button class="${c === cur ? 'on' : ''}" data-c="${c}" style="--c:${v.color}"><span>${v.emoji}</span>${c}</button>`).join('')}</div>`, (sh) => {
+        sh.querySelectorAll('[data-c]').forEach((b) => (b.onclick = () => {
+          const c = b.dataset.c;
+          txns.forEach((t) => { if (t.merchant === name) { t.category = c; t.recurring = c === 'Subscriptions'; } });
+          closeSheet(); review(); toast(`${name} → ${R.CATEGORIES[c].emoji} ${c}`);
+        }));
+      });
+    }
+
+    function go() {
+      S.csvTxns = [...txns]; S.source = 'csv'; save();
+      closeImporter();
+      if (fromWelcome) return finishOnboarding('csv');
+      recompute(); cal.month = null;
+      if (location.hash !== '#/home') location.hash = '#/home'; else route();
+      setTimeout(playSolo, 350);
+    }
+
+    el.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-imp]'); if (!b) return;
+      const act = b.dataset.imp;
+      if (act === 'back') close();
+      else if (act === 'sample') useSample();
+      else if (act === 'retry') drop();
+      else if (act === 'download') {
+        const l = document.createElement('a'); l.href = URL.createObjectURL(new Blob([R.buildSampleCSV()], { type: 'text/csv' })); l.download = 'sample-statement.csv'; l.click();
       }
-    } catch (e) { toast('hmm: ' + e.message); }
+      else if (act === 'sign') { sign = b.dataset.v; try { txns = R.parseCSV(csvText, { spendingSign: sign }); review(); } catch (err) { toast(err.message); } }
+      else if (act === 'recat') recat(b.dataset.m);
+      else if (act === 'go') go();
+    });
+    requestAnimationFrame(() => el.classList.add('on'));
+    if (file) readFile(file); else if (sample) useSample(); else drop();
   }
+  function closeImporter() {
+    phone.querySelectorAll('.importer').forEach((el) => { el.classList.remove('on'); setTimeout(() => el.remove(), 300); });
+  }
+  // dropping a CSV anywhere on the phone opens the importer instead of navigating the browser to the file
+  window.addEventListener('dragover', (e) => e.preventDefault());
+  window.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const f = e.dataTransfer?.files[0];
+    if (f && !e.target.closest?.('.dropzone') && !R.Story.active) openImporter({ fromWelcome: !S.onboarded, file: f });
+  });
 
   // ---------- Gmail / MCP receipt scan ----------
   function openGmailScan(fromWelcome) {
@@ -208,7 +371,7 @@
   }
 
   // ---------- shell ----------
-  const TABS = [['home', '🧾', 'Wrapped'], ['friends', '👯', 'Friends'], ['squads', '🤝', 'Squads'], ['roasts', '🔥', 'Roasts']];
+  const TABS = [['home', '🧾', 'Wrapped'], ['learn', '🎓', 'Learn'], ['friends', '👯', 'Friends'], ['squads', '🤝', 'Squads'], ['roasts', '🔥', 'Roasts']];
   function renderShell(page) {
     if (!TABS.some((t) => t[0] === page)) page = 'home';
     phone.innerHTML = `
@@ -217,7 +380,12 @@
       <main class="screen" id="screen"></main>
       <nav class="tabbar">${TABS.map(([id, ic, lb]) => `<a class="tab ${id === page ? 'on' : ''}" href="#/${id}"><span>${ic}</span>${lb}</a>`).join('')}</nav>`;
     const screen = $('#screen', phone);
-    ({ home: renderHome, friends: renderFriends, squads: renderSquads, roasts: renderRoasts })[page](screen);
+    ({ home: renderHome, learn: renderLearn, friends: renderFriends, squads: renderSquads, roasts: renderRoasts })[page](screen);
+  }
+
+  // ---------- LEARN (js/learn.js) ----------
+  function renderLearn(el) {
+    R.learn.render(el, { phone, toast, sheet, closeSheet, name: displayName, rerender: () => (location.hash === '#/learn' ? route() : (location.hash = '#/learn')) });
   }
 
   // ---------- HOME ----------
@@ -227,6 +395,7 @@
     const ch = S.challenge;
     el.innerHTML = `
       <h1 class="title">${esc(a.monthLabel)}<br><span class="muted">receipts</span></h1>
+      ${R.learn.homeCard()}
       <div class="hero" data-act="play">
         <div class="shape blob" style="width:220px;height:220px;top:-50px;right:-50px;background:var(--pink);animation:morph 8s ease-in-out infinite alternate"></div>
         <div class="shape star" style="width:64px;height:64px;bottom:26px;right:28px;background:var(--lime);animation:spin 16s linear infinite"></div>
@@ -275,7 +444,8 @@
       <div class="card" style="padding:6px 16px">${recentTxns().map((t, i) => `<div class="txn"><div class="ic">${R.CATEGORIES[t.category]?.emoji || '🧾'}</div>
         <div class="grow"><b>${esc(t.merchant)}</b><small>${new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}${t.noTime ? '' : ' · ' + new Date(t.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</small></div>
         <div style="text-align:right"><div class="amt num">${money(t.amount)}</div><button class="roast-it" data-act="roastTxn" data-i="${i}">🔥 roast</button></div></div>`).join('')}</div>
-      <button class="btn block ghost" style="margin-top:12px" data-act="gmail">📧 add a receipt from email</button>`;
+      <button class="btn block ghost" style="margin-top:12px" data-act="gmail">📧 add a receipt from email</button>
+      ${S.source === 'csv' ? '' : `<div class="byo" data-act="import"><span class="em">📄</span><div class="grow"><b>this is demo money 👀</b><small>drop your real bank CSV for your actual wrapped</small></div><span class="arrow">→</span></div>`}`;
     renderCalendar();
     requestAnimationFrame(() => setTimeout(() => {
       el.querySelectorAll('[data-off]').forEach((c) => (c.style.strokeDashoffset = c.dataset.off));
@@ -540,19 +710,23 @@
       <div class="field"><label>API key (aistudio.google.com/apikey)</label><input class="input" id="stKey" type="password" value="${esc(g.key || '')}" placeholder="AIza…"></div>
       <div class="field"><label>model</label><input class="input" id="stModel" value="${esc(g.model || 'gemini-2.5-flash')}"></div>
       <button class="btn sm ghost" id="stTest">test connection</button> <span id="stTestOut" class="muted" style="font-size:13px;margin-left:6px"></span>
+      <div class="section-h" style="margin-top:8px"><h3>🎧 ElevenLabs voice</h3><small>${R.voice.eleven ? 'connected' : 'off — using browser voice'}</small></div>
+      <div class="field"><label>API key (elevenlabs.io → profile → API keys)</label><input class="input" id="stVoiceKey" type="password" value="${esc(R.voice.config.key || '')}" placeholder="sk_…"></div>
+      <div class="field"><label>voice ID (optional)</label><input class="input" id="stVoiceId" value="${esc(R.voice.config.voiceId || '')}" placeholder="21m00Tcm4TlvDq8ikWAM"></div>
+      <button class="btn sm ghost" id="stVoiceTest">🔊 test voice</button>
       <div class="section-h"><h3>data</h3><small>${S.source === 'csv' ? `CSV · ${S.csvTxns?.length || 0} txns` : 'demo bank'}</small></div>
       <div class="row" style="gap:8px;flex-wrap:wrap">
-        <button class="btn sm ghost" id="stCsv">upload CSV</button>
-        <button class="btn sm ghost" id="stSample">sample CSV</button>
+        <button class="btn sm ghost" id="stCsv">📄 import statement</button>
         ${S.source === 'csv' ? '<button class="btn sm ghost" id="stDemo">back to demo data</button>' : ''}
         <button class="btn sm ghost" id="stReset" style="color:var(--red)">reset everything</button>
-      </div><input type="file" id="stFile" accept=".csv,text/csv" hidden>
+      </div>
       <button class="btn block" id="stSave" style="margin-top:22px">save</button>`, (sh) => {
       $('#stSave', sh).onclick = () => {
         const budget = Number($('#stBudget', sh).value);
         if (!Number.isFinite(budget) || budget <= 0) return toast('enter a positive monthly budget');
         S.name = $('#stName', sh).value.slice(0, 18); S.budget = budget;
         R.gemini.save({ key: $('#stKey', sh).value.trim(), model: $('#stModel', sh).value.trim() || 'gemini-2.5-flash' });
+        saveVoice(sh);
         save(); recompute(); closeSheet(); route(); toast('saved ✓');
       };
       $('#stTest', sh).onclick = async () => {
@@ -561,15 +735,14 @@
         try { const r = await R.gemini.generate('Reply with exactly: receipts ok', { temperature: 0 }); out.textContent = '✅ ' + r.slice(0, 40); }
         catch (e) { out.textContent = '❌ ' + e.message.slice(0, 80); }
       };
-      $('#stCsv', sh).onclick = () => $('#stFile', sh).click();
-      $('#stFile', sh).onchange = (e) => { closeSheet(); handleCSV(e.target.files[0], false); };
-      $('#stSample', sh).onclick = () => {
-        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([R.SAMPLE_CSV], { type: 'text/csv' })); a.download = 'sample-statement.csv'; a.click();
-      };
+      $('#stVoiceTest', sh).onclick = () => { saveVoice(sh); R.voice.speak(`hey ${displayName()}, compound interest is just interest earning interest. let's get your money right.`); };
+      $('#stCsv', sh).onclick = () => { closeSheet(); openImporter(); };
       const d = $('#stDemo', sh); if (d) d.onclick = () => { S.source = 'demo'; save(); recompute(); closeSheet(); route(); };
-      $('#stReset', sh).onclick = () => { if (confirm('reset all local data?')) { localStorage.removeItem(LS); location.hash = ''; location.reload(); } };
+      $('#stReset', sh).onclick = () => { if (confirm('reset all local data?')) { localStorage.removeItem(LS); localStorage.removeItem('receipts.learn'); location.hash = ''; location.reload(); } };
     });
   }
+
+  const saveVoice = (sh) => R.voice.save({ key: $('#stVoiceKey', sh).value.trim(), voiceId: $('#stVoiceId', sh).value.trim() || undefined });
 
   // ---------- wrapped players ----------
   function playSolo(id = 'me') {
@@ -623,7 +796,9 @@
     if (act === 'play') playSolo();
     else if (act === 'playFriends') playFriends();
     else if (act === 'settings') settingsSheet();
+    else if (act === 'learn') location.hash = '#/learn';
     else if (act === 'gmail' && S.onboarded) openGmailScan(false);
+    else if (act === 'import') openImporter();
     else if (act === 'plan') showPlan(t);
     else if (act === 'challenge') { S.challenge = { target: Math.round(A.me.prediction * 0.9), month: A.me.nextLabel }; save(); route(); toast('challenge locked in 🔒'); }
     else if (act === 'roastTxn') postRoast(recentTxns()[+t.dataset.i]);

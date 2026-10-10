@@ -176,15 +176,15 @@
 
   // ---------- CSV import (real bank exports) ----------
   const KEYWORDS = [
-    [/starbucks|dunkin|coffee|cafe|blue bottle|peet|dutch bros/i, 'Coffee'],
+    [/starbucks|dunkin|coffee|cafe|blue bottle|peet|dutch bros|boba|bubble tea|kung fu tea|gong cha/i, 'Coffee'],
     [/doordash|uber\s*eats|grubhub|postmates|seamless|instacart/i, 'Delivery'],
     [/uber|lyft|transit|mta|nj ?transit|septa|metro|parking|shell|exxon|gas/i, 'Transport'],
     [/spotify|netflix|hulu|disney|icloud|apple\.com|duolingo|planet fitness|crunchyroll|game pass|adobe|youtube|prime video|chatgpt|patreon/i, 'Subscriptions'],
     [/trader joe|whole foods|kroger|aldi|safeway|shoprite|wegmans|costco|grocery|stop ?& ?shop|publix/i, 'Groceries'],
-    [/amazon|target|walmart|shein|urban|h&m|zara|nike|best buy|temu|etsy|uniqlo/i, 'Shopping'],
+    [/amazon|amzn|target|walmart|cvs|walgreens|duane reade|shein|urban|h&m|zara|nike|best buy|temu|etsy|uniqlo/i, 'Shopping'],
     [/sephora|ulta|beauty/i, 'Beauty'],
     [/ticketmaster|amc|steam|bowl|cinema|stubhub|playstation|nintendo|eventbrite/i, 'Entertainment'],
-    [/chipotle|sweetgreen|pizza|taco|mcdonald|wendy|burger|chick|halal|restaurant|grill|kitchen|sushi|wings|panera|subway/i, 'Food'],
+    [/chipotle|sweetgreen|pizza|taco|mcdonald|wendy|burger|chick|halal|restaurant|grill|kitchen|sushi|wings|panera|subway|wawa|7-eleven|sheetz|deli|bagel/i, 'Food'],
   ];
   R.categorize = function (desc) {
     for (const [re, c] of KEYWORDS) if (re.test(desc)) return c;
@@ -271,26 +271,84 @@
       const parsedDate = R.parseTransactionDate(r[iDate]);
       if (!parsedDate) continue;
       const desc = (r[iDesc] || 'Unknown').replace(/\s{2,}/g, ' ');
-      const merchant = (desc.replace(/[#*].*$/, '').replace(/\d{3,}.*/, '').trim() || desc).slice(0, 28);
-      const category = R.categorize(desc);
+      const merchant = R.prettyMerchant(desc);
+      const category = M[merchant]?.cat || (SUBS[merchant] && 'Subscriptions') || R.categorize(desc);
       const rounded = +amt.toFixed(2);
       if (rounded <= 0) continue;
       txns.push({ ...parsedDate, merchant, category, amount: rounded, recurring: category === 'Subscriptions' });
     }
     if (!txns.length) throw new Error('No spending rows found');
-    return txns.sort((a, b) => a.date.localeCompare(b.date));
+    detectRecurring(txns);
+    txns.sort((a, b) => a.date.localeCompare(b.date));
+    txns.meta = { rows: rows.length, skipped: rows.length - txns.length };
+    return txns;
   };
 
-  R.SAMPLE_CSV = [
-    'Date,Description,Amount',
-    '09/02/2026,STARBUCKS STORE #1123,-6.45',
-    '09/02/2026,DOORDASH*CHIPOTLE,-24.10',
-    '09/03/2026,PAYROLL DEPOSIT,850.00',
-    '09/05/2026,AMAZON.COM*2K31,-38.99',
-    '09/07/2026,UBER *TRIP,-17.40',
-    '09/09/2026,SPOTIFY USA,-5.99',
-    '09/12/2026,TRADER JOE S #552,-41.22',
-  ].join('\n');
+  // Which sign purchases most likely use in an amount-only export (purchases outnumber paychecks).
+  R.guessSpendingSign = function (text) {
+    const lines = text.split(/\r?\n/).filter((l) => l.trim());
+    const head = splitCSVLine(lines[0] || '').map((h) => h.toLowerCase());
+    const iAmt = head.findIndex((h) => /^amount|amount$|amt/.test(h));
+    let neg = 0, pos = 0;
+    for (const l of lines.slice(1)) {
+      const v = Number(String(splitCSVLine(l)[iAmt] || '').replace(/[$,\s]/g, '').replace(/^\((.+)\)$/, '-$1'));
+      if (v < 0) neg++; else if (v > 0) pos++;
+    }
+    return neg >= pos ? 'negative' : 'positive';
+  };
+
+  // Same merchant, same amount, in 2+ different months -> probably a subscription.
+  function detectRecurring(txns) {
+    const groups = new Map();
+    for (const t of txns) {
+      if (t.category !== 'Other') continue;
+      const k = t.merchant + '|' + t.amount;
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(t);
+    }
+    for (const g of groups.values()) {
+      const months = new Set(g.map((t) => t.date.slice(0, 7)));
+      if (months.size >= 2 && months.size === g.length) g.forEach((t) => { t.category = 'Subscriptions'; t.recurring = true; });
+    }
+  }
+
+  // "SQ *BLUE BOTTLE COFFEE #12" -> "Blue Bottle". Known brands win, everything else gets title-cased.
+  const norm = (x) => x.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const BRANDS = () => [...Object.keys(M), ...Object.keys(SUBS)].map((n) => [norm(n), n]).sort((a, b) => b[0].length - a[0].length);
+  const ALIASES = [[/^amzn|^amazon/i, 'Amazon'], [/^(mta|nyct)/i, 'Transit'], [/^(dd |doordash)/i, 'DoorDash'], [/^apple\.com\/bill/i, 'Apple'], [/youtube/i, 'YouTube']];
+  R.prettyMerchant = function (desc) {
+    let d = desc.trim()
+      .replace(/^(purchase authorized on \d+\/\d+|checkcard \d+|debit card purchase|pos (purchase|debit)?|recurring payment|card purchase)\s*/i, '')
+      .replace(/^(sq|tst|sp|pp|paypal|py|in|sum|google)\s?\*\s*/i, '');
+    for (const [re, name] of ALIASES) if (re.test(d)) return name;
+    const n = norm(d);
+    for (const [k, name] of BRANDS()) if (n.startsWith(k)) return name;
+    d = d.replace(/[#*\/].*$/, '').replace(/\s\d{3,}.*$/, '').replace(/\b(store|inc|llc|co)\b\.?/gi, '').trim() || desc;
+    return d.toLowerCase().replace(/\b[a-z]/g, (c) => c.toUpperCase()).replace(/\b[b-df-hj-np-tv-z]{2,4}\b/gi, (w) => w.toUpperCase()).replace(/\s{2,}/g, ' ').slice(0, 28);
+  };
+
+  // A realistic 3-month bank export built from the demo person, with raw bank descriptors + paychecks.
+  const DESCRIPTORS = {
+    Starbucks: 'STARBUCKS STORE #1123', Dunkin: 'DUNKIN #348811', 'Blue Bottle': 'SQ *BLUE BOTTLE COFFEE', Chipotle: 'CHIPOTLE 2291',
+    "Joe's Pizza": "TST* JOE'S PIZZA BROADWAY", DoorDash: 'DOORDASH*CHIPOTLE', 'Uber Eats': 'UBER EATS HELP.UBER.COM',
+    Amazon: 'AMAZON.COM*2K31B8', Target: 'TARGET 00012345', Uber: 'UBER *TRIP HELP.UBER.COM', Transit: 'MTA*NYCT PAYGO',
+    "Trader Joe's": 'TRADER JOE S #552', Steam: 'STEAMGAMES.COM 4259522', 'AMC Theatres': 'AMC THEATRES 34TH ST',
+    Spotify: 'SPOTIFY USA', Netflix: 'NETFLIX.COM', Hulu: 'HULU 877-8244858', 'iCloud+': 'APPLE.COM/BILL ICLOUD',
+    'Duolingo Super': 'DUOLINGO SUPER', 'Planet Fitness': 'PLANET FITNESS CLUB FEES',
+  };
+  R.buildSampleCSV = function () {
+    const p2 = (n) => String(n).padStart(2, '0');
+    const stamp = (d) => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}T${p2(d.getHours())}:${p2(d.getMinutes())}:00`;
+    const rows = R.generate().me.map((t) => [new Date(t.date), DESCRIPTORS[t.merchant] || t.merchant.toUpperCase(), -t.amount]);
+    for (const mo of R.MONTHS) {
+      rows.push([new Date(mo.y, mo.m, 1, 9), 'CAMPUS DINING PAYROLL DIR DEP', 640]);
+      rows.push([new Date(mo.y, mo.m, 15, 9), 'CAMPUS DINING PAYROLL DIR DEP', 640]);
+    }
+    rows.push([new Date(2026, 8, 20, 18, 4), 'VENMO CASHOUT', 42]);
+    rows.sort((a, b) => a[0] - b[0]);
+    const q = (x) => (/[",]/.test(x) ? `"${x.replace(/"/g, '""')}"` : x);
+    return ['Transaction Date,Description,Amount', ...rows.map(([d, desc, amt]) => `${stamp(d)},${q(desc)},${amt.toFixed(2)}`)].join('\n');
+  };
 
   if (typeof module !== 'undefined') module.exports = R;
 })(typeof window !== 'undefined' ? window : globalThis);
