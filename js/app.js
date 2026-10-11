@@ -13,6 +13,7 @@
   ];
   const PUBLIC_SQUADS = {
     GYMRAT: { name: 'Gym Rats Who Actually Go', emoji: '🏋️', color: '#6fdba8', cat: 'Subscriptions', limit: 30, stakes: 'cancel one sub or do 50 pushups', members: ['dev', 'maya'] },
+    SNACK: { name: 'Snack Budget Society', emoji: '🌯', color: '#ffd97a', cat: 'Food', limit: 150, stakes: 'winners split the pot ◎', members: ['marcus', 'jordan', 'priya'] },
     UBER0: { name: 'Legs Exist', emoji: '🚶', color: '#5b8cff', cat: 'Transport', limit: 80, stakes: 'loser walks everyone to class', members: ['jordan', 'marcus'] },
   };
 
@@ -659,6 +660,7 @@
               <div class="v num">${money(m.amt, 0)} ${m.ok ? '✅' : '💀'}</div></div>`;
           }).join('')}
           <div class="stakes"><span>🎲 ${esc(sq.stakes)}</span><button style="font-weight:800;color:var(--lime)" data-act="invSquad" data-code="${esc(sq.code)}">invite</button></div>
+          ${potRow(sq)}
         </div>`;
       }).join('')}`;
   }
@@ -693,6 +695,129 @@
     if (!pub) return toast('no squad with that code 🤔 try GYMRAT');
     S.squads.unshift({ id: 'sq' + Date.now(), code, streak: 2, ...pub, members: ['me', ...pub.members] });
     save(); route(); toast(`joined ${pub.name} ${pub.emoji}`);
+  }
+
+  // ---------- SQUAD POTS (Solana devnet) ----------
+  // Real stakes for squads: you stake into a pot, mochii settles after the month with a privacy-preserving
+  // commitment memo and pays winners. Chain logic lives in js/solana.js; this is the UI.
+  const STAKE_OPTIONS = [0.01, 0.05, 0.1];
+  const sol = (n) => `${(+n).toFixed(n < 0.1 ? 3 : 2).replace(/0+$/, '').replace(/\.$/, '')} SOL`;
+  function potRow(sq) {
+    if (!R.sol) return '';
+    const e = R.sol.ledger(sq.code);
+    if (!e) return `<button class="pot-row" data-act="potOpen" data-code="${esc(sq.code)}"><span class="sol-mark">◎</span><span class="grow"><b>put money on it</b><small>stake a little SOL. winners split the pot.</small></span><span class="pot-go">→</span></button>`;
+    const n = sq.members.length;
+    if (!e.settled) return `<div class="pot-row on"><span class="sol-mark">◎</span><span class="grow"><b>pot ${sol(e.stakeSol * n)}</b><small>you staked ${sol(e.stakeSol)} · ${esc(R.monthLabel(e.month))} · <a href="${R.sol.explorer(e.mine.sig)}" target="_blank" rel="noopener">tx ↗</a></small></span>
+      <button class="btn sm" data-act="potSettle" data-code="${esc(sq.code)}">settle</button></div>`;
+    const won = e.settled.winners.includes('me');
+    return `<button class="pot-row ${won ? 'won' : 'lost'}" data-act="potReceipt" data-code="${esc(sq.code)}"><span class="sol-mark">◎</span><span class="grow"><b>${won ? `you won ${sol(e.settled.share)} 🎉` : `stake forfeited 💀`}</b><small>${e.settled.winners.length}/${n} winners · on-chain receipt</small></span><span class="pot-go">→</span></button>`;
+  }
+
+  const walletBox = (w, bal) => w
+    ? `<div class="card sol-wallet"><div class="row" style="justify-content:space-between"><div><small class="muted">${w.kind === 'phantom' ? 'Phantom' : 'demo wallet'} · devnet</small><b class="num">${R.sol.short(w.address)}</b></div><b class="num" data-x="bal">${bal == null ? '…' : sol(bal)}</b></div>
+       <div class="row" style="gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn sm ghost" data-x="copyAddr">copy address</button><button class="btn sm ghost" data-x="airdrop">get devnet SOL</button><a class="btn sm ghost" href="${R.sol.explorerAddr(w.address)}" target="_blank" rel="noopener">explorer ↗</a></div>
+       <div data-x="fundMsg"></div></div>`
+    : `<div class="row" style="gap:8px">${R.sol.hasPhantom() ? '<button class="btn grow" data-x="phantom">connect Phantom</button>' : ''}<button class="btn grow ${R.sol.hasPhantom() ? 'ghost' : ''}" data-x="burner">use demo wallet</button></div>
+       <p class="muted" style="font-size:12px;margin-top:8px">${R.sol.hasPhantom() ? 'set Phantom to devnet (Settings → Developer settings → Testnet mode).' : 'no Phantom? we’ll make a devnet wallet that lives in this browser.'}</p>`;
+
+  function wireWallet(sh, rerender) {
+    const on = (x, fn) => { const b = sh.querySelector(`[data-x=${x}]`); if (b) b.onclick = fn; };
+    const connect = async (kind) => {
+      try { await R.sol.connect(kind); rerender(); } catch (e) { toast('wallet: ' + e.message.slice(0, 60)); }
+    };
+    on('phantom', () => connect('phantom'));
+    on('burner', () => connect('burner'));
+    on('copyAddr', () => { copy(R.sol.wallet.address); toast('address copied'); });
+    on('airdrop', async (ev) => {
+      const b = ev.currentTarget; const msg = sh.querySelector('[data-x=fundMsg]');
+      b.disabled = true; b.innerHTML = '<span class="spinner"></span> asking faucet…';
+      try { await R.sol.airdrop(1); toast('+1 devnet SOL ◎'); rerender(); }
+      catch (e) {
+        b.disabled = false; b.textContent = 'get devnet SOL';
+        msg.innerHTML = `<p class="sol-note">the public faucet is rate-limited right now. copy your address and grab free devnet SOL at <a href="https://faucet.solana.com" target="_blank" rel="noopener">faucet.solana.com ↗</a>, then reopen this.</p>`;
+      }
+    });
+  }
+
+  function potSheet(code) {
+    const sq = S.squads.find((x) => x.code === code); if (!sq) return;
+    let amount = 0.05;
+    const render = async (sh) => {
+      const w = R.sol.wallet;
+      const body = sh.querySelector('#potBody');
+      body.innerHTML = `
+        <div class="sol-steps"><div><b>1</b>everyone stakes ${sol(amount)}</div><div><b>2</b>stay under ${money(sq.limit, 0)} on ${esc(sq.cat)}</div><div><b>3</b>winners split the pot</div></div>
+        ${walletBox(w, null)}
+        ${w ? `<div class="field" style="margin-top:14px"><label>your stake</label><div class="row" style="gap:8px">${STAKE_OPTIONS.map((v) => `<button class="chip-btn ${v === amount ? 'on' : ''}" data-amt="${v}">${sol(v)}</button>`).join('')}</div></div>
+          <div class="card" style="padding:10px 14px">${sq.members.map((id) => { const p = personById(id).person; return `<div class="member">${avatar(p, 'sm')}<div class="grow" style="font-weight:700">${esc(id === 'me' ? 'you' : p.name)}</div><small class="muted">${id === 'me' ? 'signs with your wallet' : 'staked ' + sol(amount) + ' (demo friend)'}</small></div>`; }).join('')}</div>
+          <button class="btn block" style="margin-top:14px" data-x="stake">stake ${sol(amount)} → pot of ${sol(amount * sq.members.length)}</button>
+          <p class="muted" style="font-size:12px;margin-top:10px;text-align:center">devnet only · no real money. only pass/fail + a salted hash of your spend ever goes on-chain.</p>` : ''}`;
+      wireWallet(sh, () => render(sh));
+      body.querySelectorAll('[data-amt]').forEach((b) => (b.onclick = () => { amount = +b.dataset.amt; render(sh); }));
+      const st = body.querySelector('[data-x=stake]');
+      if (st) st.onclick = async () => {
+        st.disabled = true; st.innerHTML = '<span class="spinner"></span> staking on devnet…';
+        try {
+          const e = await R.sol.stake(sq, A.me.month, amount);
+          window.mochiiWhimsy?.rain?.(18, ['◎', '✨', '🍡']);
+          closeSheet(); route(); toast('staked ◎ it’s on-chain now');
+          setTimeout(() => potReceiptSheet(code, e), 400);
+        } catch (err) {
+          st.disabled = false; st.textContent = `stake ${sol(amount)}`;
+          toast(/insufficient|0x1|debit/i.test(err.message) ? 'not enough devnet SOL. tap “get devnet SOL”' : 'stake failed: ' + err.message.slice(0, 60));
+        }
+      };
+      if (w) R.sol.balance().then((bal) => { const el = body.querySelector('[data-x=bal]'); if (el) el.textContent = sol(bal); }).catch(() => {});
+    };
+    sheet(`<h3>◎ squad pot</h3><p class="sub">${esc(sq.emoji)} ${esc(sq.name)}: put real stakes on your cap. nobody holds the money, and nobody sees your receipts.</p><div id="potBody"><span class="spinner"></span> loading Solana…</div>`, async (sh) => {
+      try { await R.sol.load(); render(sh); }
+      catch (e) { sh.querySelector('#potBody').innerHTML = `<p class="sol-note">${esc(e.message)}</p>`; }
+    });
+  }
+
+  async function settlePot(code) {
+    const sq = S.squads.find((x) => x.code === code); if (!sq) return;
+    const e = R.sol.ledger(code);
+    sheet(`<h3>settling ${esc(R.monthLabel(e.month))}…</h3><p class="sub">checking everyone’s ${esc(sq.cat)} spend against ${money(sq.limit, 0)}, committing results on-chain, paying winners.</p><div class="row muted"><span class="spinner"></span><span>signing referee transaction on devnet</span></div>`);
+    try {
+      await R.sol.load();
+      const done = await R.sol.settle(sq, e.month, squadStatus(sq));
+      closeSheet(); route();
+      if (done.settled.winners.includes('me')) window.mochiiWhimsy?.rain?.(40, ['◎', '🪙', '✨', '🍡']);
+      setTimeout(() => potReceiptSheet(code, done), 350);
+    } catch (err) { closeSheet(); toast('settle failed: ' + err.message.slice(0, 60)); }
+  }
+
+  function potReceiptSheet(code, e = R.sol.ledger(code)) {
+    const sq = S.squads.find((x) => x.code === code); if (!sq || !e) return;
+    const st = e.settled;
+    const n = sq.members.length;
+    const rows = st ? st.rows : sq.members.map((id) => ({ id, slot: 'm' + sq.members.indexOf(id) }));
+    sheet(`<h3>${st ? (st.winners.includes('me') ? 'you won the pot 🎉' : 'pot settled') : 'you’re staked ◎'}</h3>
+      <p class="sub">${esc(sq.emoji)} ${esc(sq.name)} · ${esc(R.monthLabel(e.month))} · pot ${sol(e.stakeSol * n)}</p>
+      <div class="post"><div class="receipt sol-receipt">
+        <div class="line"><span>MOCHII SQUAD POT</span><span>DEVNET</span></div>
+        <div class="line" style="opacity:.7"><span>${esc(sq.cat.toUpperCase())} CAP</span><span>${money(sq.limit, 0)}</span></div>
+        ${rows.map((r) => { const p = personById(r.id).person; return `<div class="line"><span>${r.slot} ${esc(r.id === 'me' ? 'YOU' : p.name.toUpperCase())}</span><span>${st ? (r.ok ? 'PASS' : 'FAIL') + ' · ' + r.commit : 'STAKED'}</span></div>`; }).join('')}
+        ${st ? `<div class="line tot"><span>${st.winners.includes('me') ? 'YOUR SHARE' : 'YOUR STAKE'}</span><span>${st.winners.includes('me') ? '+' + sol(st.share) : '−' + sol(e.stakeSol)}</span></div>` : `<div class="line tot"><span>YOUR STAKE</span><span>${sol(e.stakeSol)}</span></div>`}
+      </div></div>
+      ${st ? `<p class="muted" style="font-size:13px;margin:18px 0 8px">what’s public: pass/fail + a salted hash per member. what’s not: amounts, merchants, names. ${st.winners.includes('me') ? `devnet paid you <b style="color:var(--text)">${sol(st.paidSol)}</b> (your real stake back. demo friends’ shares are simulated).` : ''}</p>
+        <div class="row" style="gap:8px;flex-wrap:wrap"><a class="btn sm" href="${R.sol.explorer(st.sig)}" target="_blank" rel="noopener">settlement tx ↗</a><a class="btn sm ghost" href="${R.sol.explorer(e.mine.sig)}" target="_blank" rel="noopener">your stake tx ↗</a><button class="btn sm ghost" data-x="verify">verify my hash</button></div>
+        <div data-x="vout" style="margin-top:10px"></div>
+        <button class="btn sm ghost block" style="margin-top:14px" data-x="again">new month: stake again</button>`
+      : `<div class="row" style="gap:8px;flex-wrap:wrap;margin-top:16px"><a class="btn sm ghost" href="${R.sol.explorer(e.mine.sig)}" target="_blank" rel="noopener">stake tx ↗</a><button class="btn sm ghost" data-x="blink">share as Blink</button><button class="btn sm" data-x="settle">settle ${esc(R.monthLabel(e.month))}</button></div>
+        <p class="muted" style="font-size:12px;margin-top:10px">the month is over in the demo data, so you can settle right away.</p>`}`, (sh) => {
+      const on = (x, fn) => { const b = sh.querySelector(`[data-x=${x}]`); if (b) b.onclick = fn; };
+      on('settle', () => settlePot(code));
+      on('blink', () => { copy(R.sol.blinkUrl(sq)); toast('Blink link copied. friends can stake from X ◎'); });
+      on('again', () => { R.sol.clearLedger(code); closeSheet(); route(); potSheet(code); });
+      on('verify', async () => {
+        await R.sol.load();
+        const v = await R.sol.verify(sq, e);
+        const me = st.rows.find((r) => r.id === 'me');
+        sh.querySelector('[data-x=vout]').innerHTML = `<div class="sol-note">sha256("${esc(sq.code)}|${e.month}|${me.slot}|${me.cents}|${me.salt}") → <b>${v.hash}</b> ${v.ok ? '= on-chain ✓' : '≠ on-chain ✗'}</div>`;
+      });
+    });
   }
 
   // ---------- ROASTS ----------
@@ -882,6 +1007,9 @@
     else if (act === 'joinSquad') sheet(`<h3>join a squad</h3><p class="sub">got a code from the group chat? (try <b>GYMRAT</b> or <b>UBER0</b>)</p>
         <div class="field"><input class="input" id="jc" placeholder="CODE" style="text-transform:uppercase;letter-spacing:.1em;font-weight:800"></div><button class="btn block" id="jcGo">join</button>`,
       (sh) => { $('#jcGo', sh).onclick = () => { const c = $('#jc', sh).value; closeSheet(); joinSquad(c); }; });
+    else if (act === 'potOpen') potSheet(t.dataset.code);
+    else if (act === 'potSettle') settlePot(t.dataset.code);
+    else if (act === 'potReceipt') potReceiptSheet(t.dataset.code);
     else if (act === 'invSquad') { copy(`${baseUrl()}#/join/${t.dataset.code}`); toast(`invite copied · code ${t.dataset.code}`); }
     else if (act === 'confess') confessSheet();
     else if (act === 'calDay') { cal.day = +t.dataset.d; renderCalendar(); }

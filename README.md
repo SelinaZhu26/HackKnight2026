@@ -19,6 +19,8 @@ python3 -m http.server 5173
 
 **🐯 Tiger Data:** purchases and lesson activity are stored in Tiger Cloud (TimescaleDB hypertables plus a continuous aggregate). Set `DATABASE_URL` and see [`TIGER.md`](TIGER.md) for setup, the API, and demo queries for judges.
 
+**◎ Solana:** squads can put real stakes on their caps. Friends stake into a squad pot, winners split it when the month settles, and only pass/fail plus a salted hash of each member's spend goes on-chain. Squad links double as Blinks. See [`SOLANA.md`](SOLANA.md) for the design, trust model, demo script and judge Q&A.
+
 For a Next.js server, see [`backend/README.md`](backend/README.md). Run `npm ci`
 and `npm run dev` from `backend/`; it copies and serves the existing frontend
 without converting it to React. Production uses `npm run build` and `npm start`.
@@ -42,6 +44,7 @@ Run the focused regression suite with `node --test tests/regressions.test.js tes
 |---|---|
 | **Learn** 🎓 | Duolingo-style money course from `lesson-plan.md`: 12 units, 72 lessons on a winding path. Each lesson has a short tip, then quick exercises (match pairs, fill in the blank, multiple choice, number crunching), then an "explain it" question that Gemini tutors with progressive hints and an "I'm stuck" worked answer. Unit challenges, "jump here?" test-outs, and a guidebook per unit |
 | **Consistency loop** 🔥 | XP, daily goal ring, daily quests, streaks with a streak freeze (earned by finishing all quests), hearts that regenerate (explain-it questions never cost hearts), 1–3 stars per lesson, a weekly friends league, confetti and sounds. Home shows a streak nudge card |
+| **Squad pots** ◎ | Stake devnet SOL on a squad's cap (Phantom or an in-browser demo wallet). Settlement writes a privacy-preserving commitment memo and pays winners. "verify my hash" checks your result against the chain, and squad links work as Solana Blinks. Try code `SNACK` |
 | **Smart practice** 🧠 | Adaptive review that tracks a 1–5 difficulty level from your accuracy. With a key, Gemini writes fresh questions at that level on topics you've finished (validated before display). Offline, it remixes your past exercises, favoring ones you missed. Earns back a heart |
 | **Voice** 🎧 | 🔊 on any tip or question, plus a voice mode that reads every prompt and tutor reply aloud. Uses ElevenLabs when a key is set in ⚙️, otherwise browser speech |
 | **Solo Wrapped** | 13-slide animated story: total spent, vs last month, top categories, top merchants ("on repeat"), late-night spending, "the one that hurt", subscription audit with 👻 unused subs, money aura, health score, AI roast, prediction, group-chat rank, and a share card |
@@ -98,6 +101,9 @@ js/curriculum.js  the 72-lesson course data (tips, exercises, tutor rubrics) fro
 js/learn.js       Learn tab: path, lesson player, XP/streaks/hearts/quests/league, Gemini tutor + practice
 js/voice.js       ElevenLabs text-to-speech with a browser-speech fallback
 js/app.js         routing, screens, sheets, squads, roast board, settings, state (localStorage)
+js/solana.js      squad pots: wallet, stake, settle with hash commitments, verify, Blink link (devnet)
+js/whimsy.js      logo hover animation and easter eggs
+backend/app/api/actions/   Solana Actions (Blink) endpoints for squad pots
 ```
 
 ## Next steps

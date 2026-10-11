@@ -317,6 +317,28 @@ textarea.input { height: 140px; padding: 14px 16px; resize: none; font-size: 14p
 .member .bar { flex: 1; height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; position: relative; }
 .member .bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; }
 .member .v { width: 92px; text-align: right; font-weight: 700; }
+/* squad pots (Solana) */
+.pot-row { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; margin-top: 10px; padding: 12px 14px; border-radius: 16px;
+  background: linear-gradient(135deg, rgba(161, 139, 255, 0.16), rgba(127, 220, 208, 0.12)); border: 1px dashed rgba(161, 139, 255, 0.5); }
+.pot-row.on { border-style: solid; }
+.pot-row.won { background: linear-gradient(135deg, rgba(111, 219, 168, 0.22), rgba(181, 228, 140, 0.14)); border: 1px solid rgba(111, 219, 168, 0.6); }
+.pot-row.lost { background: var(--surface-2); border: 1px solid var(--line); }
+.pot-row b { display: block; font-size: 14px; }
+.pot-row small { color: var(--muted); font-size: 12px; }
+.pot-row small a { color: var(--purple); }
+.pot-go { font-weight: 800; color: var(--purple); }
+.sol-mark { width: 34px; height: 34px; border-radius: 12px; display: grid; place-items: center; font-weight: 800; font-size: 18px; color: #22182a;
+  background: linear-gradient(135deg, #a18bff, #7fdcd0); flex-shrink: 0; }
+.sol-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+.sol-steps div { background: var(--surface-2); border-radius: 14px; padding: 10px; font-size: 12px; font-weight: 600; line-height: 1.25; }
+.sol-steps b { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--purple); color: #22182a; font-size: 12px; margin-bottom: 6px; }
+.sol-wallet b { display: block; font-size: 17px; }
+.sol-wallet small { font-size: 12px; }
+.sol-note { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); font-size: 13px; line-height: 1.4; word-break: break-all; }
+.sol-note a { color: var(--lime); }
+.chip-btn { padding: 8px 14px; border-radius: 999px; background: var(--surface-2); font-weight: 700; font-size: 14px; border: 2px solid transparent; }
+.chip-btn.on { border-color: var(--lime); }
+.sol-receipt .line { gap: 10px; font-size: 12px; margin-top: 4px; }
 .stakes { margin-top: 14px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); font-size: 13px; display: flex; justify-content: space-between; gap: 8px; }
 .friend-pick { display: flex; flex-wrap: wrap; gap: 8px; }
 .friend-pick label { display: flex; align-items: center; gap: 6px; padding: 6px 12px 6px 6px; border-radius: 999px; background: var(--surface-2); cursor: pointer; font-size: 14px; border: 2px solid transparent; }
