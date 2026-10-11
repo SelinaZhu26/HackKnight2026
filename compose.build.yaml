@@ -1,0 +1,5 @@
+services:
+  finapp:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile

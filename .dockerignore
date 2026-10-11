@@ -1,0 +1,23 @@
+# Only the backend build inputs and browser assets enter the build context.
+**
+!index.html
+!styles.css
+!js/
+!js/**
+!backend/
+!backend/package.json
+!backend/package-lock.json
+!backend/Dockerfile
+!backend/app/
+!backend/app/**
+!backend/scripts/
+!backend/scripts/**
+
+# Exclude secrets and generated artifacts even inside included directories.
+**/.env
+**/.env.*
+**/node_modules
+**/.next
+**/.git
+**/*.pem
+**/*.key
