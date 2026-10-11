@@ -35,7 +35,7 @@ test('amount-only CSV requires a sign regardless of row counts', () => {
   assert.throws(() => R.parseCSV(text), { code: 'CSV_SIGN_REQUIRED' });
   const txns = negative(text);
   assert.equal(txns.length, 1);
-  assert.equal(txns[0].merchant, 'STARBUCKS');
+  assert.equal(txns[0].merchant, 'Starbucks');
   assert.equal(txns[0].amount, 6.45);
   assert.throws(() => R.parseCSV(csv(['09/03/2026,STARBUCKS,-6.45'])), { code: 'CSV_SIGN_REQUIRED' });
 });
@@ -90,8 +90,8 @@ test('subscriptions-only stories retain totals and subscription details', () => 
   assert.equal(a.total, 21.48);
   assert.equal(a.topMerchant, undefined);
   const html = R.soloSlides({ a, name: 'You' }).map((s) => s.html).join('');
-  assert.match(html, /NETFLIX/);
-  assert.match(html, /SPOTIFY/);
+  assert.match(html, /Netflix/);
+  assert.match(html, /Spotify/);
   assert.match(html, /\$21.48\/mo/);
   assert.ok(!/undefined|NaN|Infinity/.test(html));
   assert.doesNotThrow(() => R.summaryCard(JSON.parse(JSON.stringify(R.summaryData(a, 'You')))));
@@ -139,7 +139,11 @@ test('all six seeded demo profiles still generate stories and valid share summar
     assert.ok(R.soloSlides({ a, name: p.name }).length >= 10);
     assert.doesNotThrow(() => R.validateSummary(R.summaryData(a, p.name)));
   }
-  assert.equal(negative(R.SAMPLE_CSV).length, 6);
+  const imported = negative(R.buildSampleCSV());
+  assert.equal(imported.length, data.me.length);
+  assert.equal(imported.reduce((sum, t) => sum + Math.round(t.amount * 100), 0),
+    data.me.reduce((sum, t) => sum + Math.round(t.amount * 100), 0));
+  assert.ok(imported.every((t) => !/PAYROLL|VENMO/i.test(t.merchant)));
 });
 
 test('offline receipt parser rejects accounting refunds and prefers the final total', async () => {

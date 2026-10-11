@@ -72,6 +72,34 @@ The base `compose.yaml` deploys an existing versioned image. The separate
 
 ## Publish and deploy a version
 
+### Automatic deployment
+
+The `.github/workflows/deploy.yml` workflow runs on pushes to `main` and can be
+started manually from GitHub Actions. It runs regression tests, builds a Linux
+image, verifies its HTML and referenced CSS/JavaScript against the source, and
+publishes `excsi/finapp:<full-commit-SHA>`. Publishing requires the repository
+secret `DOCKERHUB_TOKEN` with Docker Hub write access.
+
+The deployment job runs on the `fin-instance` self-hosted runner with the
+`finapp-deploy` label. The runner service lives in `/opt/actions-runner` and
+runs as the dedicated `finapp-runner` user. It calls the root-owned
+`/usr/local/sbin/finapp-deploy` helper installed from
+`backend/deploy/finapp-deploy.sh`. Its sudo rule permits only that helper.
+The helper pulls the image, updates `/apps/finapp/.env`, waits for container
+health, checks public HTTPS, and restores the previous image version if a
+deployment check fails. It rejects image versions that are not full commit SHAs.
+
+Only pushes or manual runs for this repository's `main` branch deploy. The
+workflow does not run on pull requests. Nginx and Compose configuration remain
+managed on the server; update those separately if infrastructure changes.
+
+The runner service can be inspected from `/opt/actions-runner` with
+`sudo ./svc.sh status`. Restart it with `sudo ./svc.sh stop` followed by
+`sudo ./svc.sh start`. Reinstall the root-owned deployment helper after changing
+its source; repository edits alone do not replace the server's trusted helper.
+
+### Manual publishing
+
 Set `IMAGE_REPOSITORY` to your Docker Hub repository (for example,
 `yourname/finapp`) and select a new `IMAGE_VERSION` in `.env`. From the root:
 

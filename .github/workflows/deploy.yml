@@ -1,0 +1,76 @@
+name: Build and deploy Finapp
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: finapp-production
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.repository == 'SelinaZhu26/HackKnight2026' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Run regression tests
+        run: node --test tests/regressions.test.js tests/learn.test.js
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Build deployment image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: backend/Dockerfile
+          platforms: linux/amd64
+          load: true
+          tags: excsi/finapp:${{ github.sha }}
+
+      - name: Verify the image serves the frontend
+        env:
+          IMAGE_VERSION: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          docker run -d --name finapp-ci -p 127.0.0.1:3017:3000 "excsi/finapp:$IMAGE_VERSION"
+          trap 'docker logs finapp-ci; docker rm -f finapp-ci' EXIT
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:3017/ -o /dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          node backend/scripts/verify-static.mjs http://127.0.0.1:3017
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: excsi
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Publish verified image
+        env:
+          IMAGE_VERSION: ${{ github.sha }}
+        run: docker push "excsi/finapp:$IMAGE_VERSION"
+
+  deploy:
+    needs: build
+    if: github.repository == 'SelinaZhu26/HackKnight2026' && github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, Linux, X64, finapp-deploy]
+    timeout-minutes: 10
+    steps:
+      - name: Deploy with health checks and rollback
+        env:
+          IMAGE_VERSION: ${{ github.sha }}
+        run: sudo -n /usr/local/sbin/finapp-deploy "$IMAGE_VERSION"
