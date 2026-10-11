@@ -5,7 +5,6 @@
  *  • click the logo      → boop + speech bubble; 7 quick boops = mochi party 🍡
  *  • type "mochi"        → a buddy peeks up and waves
  *  • idle 30s            → buddy falls asleep (z z z), wakes when you're back
- *  • tap the buddy       → it roasts one of your recent purchases (always out on the Roasts tab)
  *  • ↑↑↓↓←→←→BA          → secret rainbow mode + dango rain
  *  • 11pm–4am            → logo gets a sleepy moon
  *  • open devtools       → say hi
@@ -54,11 +53,11 @@
   // ---------- speech bubble ----------
   let bubbleEl, bubbleT;
   // (x, y) is the top-left of the thing speaking; `below` is its bottom edge, used when there's no room above
-  function say(text, x, y, ms = 1800, below = y + 40, wide = false) {
+  function say(text, x, y, ms = 1800, below = y + 40) {
     if (bubbleEl) bubbleEl.remove();
     clearTimeout(bubbleT);
     const b = document.createElement('div');
-    b.className = 'wh-bubble' + (wide ? ' wide' : ''); b.textContent = text;
+    b.className = 'wh-bubble'; b.textContent = text;
     document.body.appendChild(b);
     const w = b.offsetWidth;
     b.style.left = Math.max(8, Math.min(innerWidth - w - 8, x)) + 'px';
@@ -147,52 +146,21 @@
   function getBuddy() {
     if (buddy && buddy.isConnected) return buddy;
     if (!phone) return null;
-    buddy = document.createElement('button');
+    buddy = document.createElement('div');
     buddy.className = 'wh-buddy';
-    buddy.setAttribute('aria-label', 'roast me');
-    buddy.innerHTML = '<span class="mochi"></span><span class="z">z</span><span class="z">z</span><span class="z">Z</span><span class="wh-tag">roast me 🔥</span>';
-    // one tap = one roast, whether the buddy is awake, peeking or asleep
-    buddy.addEventListener('click', (e) => { e.stopPropagation(); roastMe(); });
+    buddy.setAttribute('aria-hidden', 'true');
+    buddy.innerHTML = '<span class="mochi"></span><span class="z">z</span><span class="z">z</span><span class="z">Z</span>';
+    buddy.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const r = buddy.getBoundingClientRect();
+      if (buddy.classList.contains('sleep')) { wake(); say('!! i was not sleeping', r.left - 60, r.top); }
+      else { say(pick(['hi hi 👋', 'pat pat', 'i live here now', 'ok bye 💨']), r.left - 40, r.top); setTimeout(hideBuddy, 1200); }
+      burst(r.left + r.width / 2, r.top, 4);
+    });
     phone.appendChild(buddy);
     return buddy;
   }
-  const onRoasts = () => /^#\/roasts/.test(location.hash);
-  // On the Roasts tab the buddy stays out as a "roast me" button; elsewhere it only shows up for easter eggs.
-  function hideBuddy() {
-    if (!buddy) return;
-    buddy.classList.remove('sleep', 'wave');
-    if (!onRoasts()) buddy.classList.remove('on');
-  }
-  function syncBuddy() {
-    if (document.querySelector('.welcome')) return;
-    const b = onRoasts() ? getBuddy() : buddy;
-    if (!b) return;
-    b.classList.toggle('pinned', onRoasts());
-    if (onRoasts()) b.classList.add('on'); else if (!asleep) b.classList.remove('on');
-  }
-  addEventListener('hashchange', () => setTimeout(syncBuddy, 0));
-  setTimeout(syncBuddy, 0);
-
-  let roasting = false;
-  async function roastMe() {
-    const b = getBuddy(); if (!b || roasting) return;
-    asleep = false;
-    b.classList.remove('sleep', 'wave'); b.classList.add('on');
-    void b.offsetWidth; b.classList.add('wave');
-    const r = b.getBoundingClientRect();
-    const at = (text, ms) => say(text, r.right - 250, r.top, ms, r.bottom, true);
-    burst(r.left + r.width / 2, r.top, 4, ['🔥', '✨', '💀']);
-    if (!window.mochiiRoast) return at('you\u2019re so mid i can\u2019t even roast u', 3000);
-    roasting = true;
-    const slow = setTimeout(() => at('cooking a roast\u2026 🔥', 8000), 250);
-    try {
-      const { head, line } = await window.mochiiRoast();
-      clearTimeout(slow);
-      at(head ? `${head}\n${line}` : line, 5500);
-    } catch { clearTimeout(slow); at('my roast oven broke. u got lucky.', 3000); }
-    roasting = false;
-    setTimeout(hideBuddy, 5600);
-  }
+  function hideBuddy() { if (buddy) buddy.classList.remove('on', 'sleep', 'wave'); }
   function peek() {
     const b = getBuddy(); if (!b) return;
     b.classList.remove('sleep'); b.classList.add('on', 'wave');
