@@ -5,28 +5,42 @@
 (function (global) {
   const R = (global.R = global.R || {});
   const LS = 'receipts.gemini';
+  // gemini-2.5-* is closed to new API keys, so older saved configs are moved onto the current default.
+  const DEFAULT_MODEL = 'gemini-3.8-flash';
+  const FALLBACK_MODEL = 'gemini-3.5-flash';
+  const RETIRED = /^gemini-(1\.|2\.0|2\.5)/;
 
   R.gemini = {
+    DEFAULT_MODEL,
     get config() {
-      try { return JSON.parse(localStorage.getItem(LS)) || {}; } catch { return {}; }
+      let cfg;
+      try { cfg = JSON.parse(localStorage.getItem(LS)) || {}; } catch { return {}; }
+      if (!cfg.model || RETIRED.test(cfg.model)) cfg.model = DEFAULT_MODEL;
+      return cfg;
     },
     save(cfg) { try { localStorage.setItem(LS, JSON.stringify(cfg)); } catch {} },
     get enabled() { return !!this.config.key; },
 
     async generate(prompt, { json = false, temperature = 1.0 } = {}) {
-      const { key, model = 'gemini-2.5-flash' } = this.config;
+      const { key, model } = this.config;
       if (!key) throw new Error('no-key');
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { temperature, ...(json ? { responseMimeType: 'application/json' } : {}) },
-        }),
+      const body = JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: { temperature, ...(json ? { responseMimeType: 'application/json' } : {}) },
       });
+      const call = (m) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, body,
+      });
+      // Overload (429/503) is common on new models: retry once, then try the previous flash before giving up.
+      let res = await call(model);
+      for (const next of [model, FALLBACK_MODEL]) {
+        if (res.status !== 429 && res.status !== 503) break;
+        await new Promise((r) => setTimeout(r, 1200));
+        res = await call(next);
+      }
       if (!res.ok) throw new Error(`Gemini ${res.status}: ${(await res.text()).slice(0, 160)}`);
       const data = await res.json();
-      const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text).join('') || '';
+      const text = data.candidates?.[0]?.content?.parts?.filter((p) => !p.thought).map((p) => p.text || '').join('') || '';
       return json ? JSON.parse(text.replace(/^```json|```$/g, '').trim()) : text.trim();
     },
   };

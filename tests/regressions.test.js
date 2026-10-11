@@ -177,3 +177,12 @@ test('CSV merchant normalization always stays within the summary limit', () => {
   assert.equal(txns[0].merchant.length, 28);
   assert.doesNotThrow(() => R.soloSlides({ a: R.analyze(txns), name: 'You' }));
 });
+
+test('saved Gemini configs on retired models move to the current default', (t) => {
+  const original = global.localStorage.getItem;
+  t.after(() => { global.localStorage.getItem = original; });
+  for (const [saved, expected] of [[undefined, R.gemini.DEFAULT_MODEL], ['gemini-2.5-flash', R.gemini.DEFAULT_MODEL], ['gemini-3.5-flash', 'gemini-3.5-flash']]) {
+    global.localStorage.getItem = () => JSON.stringify({ key: 'k', model: saved });
+    assert.equal(R.gemini.config.model, expected);
+  }
+});

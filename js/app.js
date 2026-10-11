@@ -886,8 +886,8 @@
       <div class="field"><label>display name</label><input class="input" id="stName" maxlength="18" value="${esc(S.name.trim().slice(0, 18))}" placeholder="You"></div>
       <div class="field"><label>monthly budget ($)</label><input class="input" id="stBudget" type="number" min="0.01" step="0.01" value="${S.budget}"></div>
       <div class="section-h" style="margin-top:8px"><h3>✨ Gemini</h3><small>${R.gemini.enabled ? 'connected' : 'off — using roast bot'}</small></div>
-      <div class="field"><label>API key (aistudio.google.com/apikey)</label><input class="input" id="stKey" type="password" value="${esc(g.key || '')}" placeholder="AIza…"></div>
-      <div class="field"><label>model</label><input class="input" id="stModel" value="${esc(g.model || 'gemini-2.5-flash')}"></div>
+      <div class="field"><label>API key (aistudio.google.com/apikey)</label><input class="input" id="stKey" type="password" value="${esc(g.key || '')}" placeholder="paste your Gemini API key"></div>
+      <div class="field"><label>model</label><input class="input" id="stModel" value="${esc(g.model)}"></div>
       <button class="btn sm ghost" id="stTest">test connection</button> <span id="stTestOut" class="muted" style="font-size:13px;margin-left:6px"></span>
       <div class="section-h" style="margin-top:8px"><h3>🎧 ElevenLabs voice</h3><small>${R.voice.eleven ? 'connected' : 'off — using browser voice'}</small></div>
       <div class="field"><label>API key (elevenlabs.io → profile → API keys)</label><input class="input" id="stVoiceKey" type="password" value="${esc(R.voice.config.key || '')}" placeholder="sk_…"></div>
@@ -908,12 +908,12 @@
         const budget = Number($('#stBudget', sh).value);
         if (!Number.isFinite(budget) || budget <= 0) return toast('enter a positive monthly budget');
         S.name = $('#stName', sh).value.slice(0, 18); S.budget = budget;
-        R.gemini.save({ key: $('#stKey', sh).value.trim(), model: $('#stModel', sh).value.trim() || 'gemini-2.5-flash' });
+        R.gemini.save({ key: $('#stKey', sh).value.trim(), model: $('#stModel', sh).value.trim() || R.gemini.DEFAULT_MODEL });
         saveVoice(sh);
         save(); recompute(); closeSheet(); route(); toast('saved ✓');
       };
       $('#stTest', sh).onclick = async () => {
-        R.gemini.save({ key: $('#stKey', sh).value.trim(), model: $('#stModel', sh).value.trim() || 'gemini-2.5-flash' });
+        R.gemini.save({ key: $('#stKey', sh).value.trim(), model: $('#stModel', sh).value.trim() || R.gemini.DEFAULT_MODEL });
         const out = $('#stTestOut', sh); out.textContent = 'testing…';
         try { const r = await R.gemini.generate('Reply with exactly: mochii club ok', { temperature: 0 }); out.textContent = '✅ ' + r.slice(0, 40); }
         catch (e) { out.textContent = '❌ ' + e.message.slice(0, 80); }
