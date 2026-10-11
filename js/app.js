@@ -98,31 +98,62 @@
   window.addEventListener('hashchange', route);
 
   // ---------- welcome / onboarding ----------
-  function renderWelcome() {
-    phone.innerHTML = `<div class="welcome">
-      <div class="shape circle" style="width:300px;height:300px;top:-60px;right:-90px;background:var(--pink);animation:float 7s ease-in-out infinite alternate"></div>
+  // Two-step walkthrough: 1) your name, 2) where your receipts come from.
+  const SOURCES = [
+    { id: 'demo', em: '🏦', title: 'Connect your bank', sub: 'demo bank · 3 months of real-looking data', tag: 'fastest', cta: 'connect bank' },
+    { id: 'csv', em: '📄', title: 'Upload a bank statement', sub: 'CSV export from any bank · or try a sample', cta: 'upload statement' },
+    { id: 'gmail', em: '📧', title: 'Scan Gmail receipts', sub: 'Gemini reads your order confirmation emails', cta: 'scan my inbox' },
+  ];
+  function renderWelcome(step = S.name.trim() && S.welcomeStep === 2 ? 2 : 1) {
+    const dots = `<div class="ob-dots" aria-label="step ${step} of 2">${[1, 2].map((i) => `<i class="${i <= step ? 'on' : ''}"></i>`).join('')}</div>`;
+    const shapes = `<div class="shape circle" style="width:300px;height:300px;top:-60px;right:-90px;background:var(--pink);animation:float 7s ease-in-out infinite alternate"></div>
       <div class="shape star" style="width:64px;height:64px;top:26px;right:170px;background:#0a0a0c;animation:spin 20s linear infinite"></div>
-      <div class="shape ring" style="width:110px;height:110px;top:70px;right:24px;border-width:14px;border-color:var(--purple);animation:float 6s ease-in-out infinite alternate-reverse"></div>
-      <div class="logo" style="position:relative;z-index:1">receipts<i>.</i></div>
-      <h1>your money had a month. let’s talk about it.</h1>
-      <p class="lead">spotify wrapped, but for your bank statement. + friends who keep you accountable.</p>
-      <div class="field" style="position:relative;z-index:1"><input class="input" id="nm" maxlength="18" placeholder="what do we call you?" value="${esc(S.name)}" autocomplete="off"></div>
-      <div class="connect">
-        <button data-act="demo"><span class="em">🏦</span><span><b>Connect bank</b><small>demo account · 3 months of data</small></span></button>
-        <button data-act="gmail" class="secondary"><span class="em">📧</span><span><b>Scan Gmail receipts</b><small>MCP server + Gemini reads your order emails</small></span></button>
-        <button data-act="csv" class="secondary"><span class="em">📄</span><span><b>Upload bank statement</b><small>CSV from any bank · or try a sample</small></span></button>
-      </div>
-      <div class="fine">demo build for hack knight · everything stays in your browser</div>
+      <div class="shape ring" style="width:110px;height:110px;top:70px;right:24px;border-width:14px;border-color:var(--purple);animation:float 6s ease-in-out infinite alternate-reverse"></div>`;
+    if (step === 1) {
+      phone.innerHTML = `<div class="welcome">${shapes}
+        <div class="ob-top"><div class="logo">receipts<i>.</i></div>${dots}</div>
+        <h1>your money had a month. let’s talk about it.</h1>
+        <p class="lead">spotify wrapped for your bank statement, plus friends who keep you accountable.</p>
+        <form class="ob-name" id="obName">
+          <label for="nm">first things first, what do we call you?</label>
+          <input class="input" id="nm" maxlength="18" placeholder="your name" value="${esc(S.name)}" autocomplete="given-name" enterkeyhint="next">
+          <button class="btn dark block" id="obNext" ${S.name.trim() ? '' : 'disabled'}>continue →</button>
+        </form>
+        <div class="fine">🔒 everything stays in your browser</div>
+      </div>`;
+      const nm = $('#nm', phone); const next = $('#obNext', phone);
+      nm.addEventListener('input', () => { S.name = nm.value; save(); next.disabled = !nm.value.trim(); });
+      $('#obName', phone).onsubmit = (e) => { e.preventDefault(); if (!nm.value.trim()) return nm.focus(); S.welcomeStep = 2; save(); renderWelcome(2); };
+      setTimeout(() => nm.focus(), 50);
+      return;
+    }
+    let pick = S.welcomeSource || 'demo';
+    phone.innerHTML = `<div class="welcome step2">
+      <div class="ob-top"><button class="ob-back" id="obBack" aria-label="back">←</button><div class="logo">receipts<i>.</i></div>${dots}</div>
+      <h2 class="ob-h">nice to meet you, ${esc(displayName())} 👋</h2>
+      <p class="lead">where should we pull your receipts from?</p>
+      <div class="ob-sources" role="radiogroup">${SOURCES.map((o) => `
+        <button class="ob-src ${o.id === pick ? 'on' : ''}" role="radio" aria-checked="${o.id === pick}" data-src="${o.id}">
+          <span class="em">${o.em}</span><span class="grow"><b>${o.title}${o.tag ? ` <i class="tag">${o.tag}</i>` : ''}</b><small>${o.sub}</small></span><span class="radio"></span>
+        </button>`).join('')}</div>
+      <button class="btn dark block" id="obGo">${SOURCES.find((o) => o.id === pick).cta} →</button>
+      <div class="fine">🔒 read-only · stays on your device · switch anytime</div>
     </div>`;
-    const nm = $('#nm', phone);
-    nm.addEventListener('input', () => { S.name = nm.value; save(); });
-    phone.querySelector('[data-act=demo]').onclick = () => finishOnboarding('demo');
-    phone.querySelector('[data-act=gmail]').onclick = () => openGmailScan(true);
-    phone.querySelector('[data-act=csv]').onclick = () => openImporter({ fromWelcome: true });
+    phone.querySelectorAll('[data-src]').forEach((b) => (b.onclick = () => {
+      pick = b.dataset.src; S.welcomeSource = pick; save();
+      phone.querySelectorAll('[data-src]').forEach((x) => { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', x === b); });
+      $('#obGo', phone).textContent = `${SOURCES.find((o) => o.id === pick).cta} →`;
+    }));
+    $('#obBack', phone).onclick = () => { S.welcomeStep = 1; save(); renderWelcome(1); };
+    $('#obGo', phone).onclick = () => {
+      if (pick === 'demo') finishOnboarding('demo');
+      else if (pick === 'gmail') openGmailScan(true);
+      else openImporter({ fromWelcome: true });
+    };
   }
   function finishOnboarding(source) {
     S.source = source === 'csv' ? 'csv' : 'demo';
-    S.onboarded = true; save(); recompute();
+    S.onboarded = true; delete S.welcomeStep; delete S.welcomeSource; save(); recompute();
     const join = S.pendingJoin; delete S.pendingJoin;
     location.hash = join ? `#/join/${join}` : '#/home';
     if (!join) setTimeout(playSolo, 350);
