@@ -41,7 +41,7 @@
 
 /* ---------- speech bubble ---------- */
 .wh-bubble { position: fixed; z-index: 9999; pointer-events: none;
-  background: #fff4ec; color: #22182a; font-family: var(--font); font-weight: 600; font-size: 14px;
+  background: #fffaf1; color: #22182a; font-family: var(--font); font-weight: 600; font-size: 14px;
   padding: 8px 13px; border-radius: 16px 16px 16px 4px; white-space: nowrap;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
   animation: wh-pop 0.35s cubic-bezier(0.3, 1.6, 0.5, 1) both; }

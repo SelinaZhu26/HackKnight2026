@@ -451,7 +451,7 @@
       ${R.learn.homeCard()}
       ${R.future.homeCard(futureCtx())}
       <div class="hero" data-act="play">
-        <div class="shape blob" style="width:220px;height:220px;top:-50px;right:-50px;background:var(--pink);animation:morph 8s ease-in-out infinite alternate"></div>
+        <div class="shape blob" style="width:220px;height:220px;top:-50px;right:-50px;background:var(--teal);animation:morph 8s ease-in-out infinite alternate"></div>
         <div class="shape star" style="width:64px;height:64px;bottom:26px;right:28px;background:var(--lime);animation:spin 16s linear infinite"></div>
         <div class="shape ring" style="width:90px;height:90px;top:18px;right:26px;border-width:12px;border-color:var(--yellow);animation:float 5s ease-in-out infinite alternate"></div>
         <div class="kicker">just dropped</div>
