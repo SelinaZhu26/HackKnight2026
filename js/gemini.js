@@ -114,23 +114,6 @@ DATA: ${statsBlob(a, name)}`, { json: true, temperature: 0.8 });
       }
     },
 
-    async roastPurchase(t, who) {
-      try {
-        return await R.gemini.generate(`${VOICE}
-One-line roast (max 18 words) of ${who} spending $${t.amount.toFixed(2)} at ${t.merchant} (${t.category})${t.note ? `, they said: "${t.note}"` : ''}.`);
-      } catch (e) {
-        const lines = {
-          Coffee: [`$${t.amount.toFixed(2)} for bean water. the barista has your birthday saved.`, `this coffee had better come with a mortgage.`],
-          Delivery: [`paying a stranger $${(t.amount * 0.3).toFixed(0)} to walk your food up the stairs. iconic.`, `the restaurant is 6 minutes away. you have legs.`],
-          Shopping: [`"i needed it" — narrator: they did not need it.`, `adding to cart is not cardio.`],
-          Transport: [`ubering a distance a golden retriever could walk.`, `$${t.amount.toFixed(0)} to avoid a 12 minute walk. respect the commitment.`],
-          Entertainment: [`main character behavior. side character bank account.`, `the vibes were immaculate. the balance was not.`],
-        };
-        const arr = lines[t.category] || [`$${t.amount.toFixed(2)} at ${t.merchant}?? explain yourself.`];
-        return arr[Math.floor(Math.random() * arr.length)];
-      }
-    },
-
     // Email-receipt → transaction. This is the piece the MCP Gmail server would feed.
     async parseReceipt(text) {
       let receipt;

@@ -17,7 +17,7 @@
 - **Learn tutor:** grades "explain it" answers by meaning, gives progressive hints, and has an "I'm stuck" worked answer.
 - **Smart practice:** writes new questions at your 1–5 level, validated before display.
 - **Receipt parsing:** turns an email into `{merchant, date, amount, category}` with JSON mode, validated before saving.
-- **Roasts and glow-up plan:** personal, built from your real stats.
+- **Wrapped roast slide and glow-up plan:** personal, built from your real stats. The social feed stays human: friends react and comment, not a bot.
 - **Model:** `gemini-3.5-flash`. If it's overloaded, the app switches straight to `gemini-3.8-flash`, then retries once. Every feature has an offline fallback, so the demo never breaks.
 - **Demo:** ⚙️ → paste key → *test connection* → Learn "explain it" → Gmail "paste a receipt".
 - Code: `js/gemini.js`

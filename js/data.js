@@ -32,6 +32,15 @@
     Other:         { emoji: '🧾', color: '#b8b8c8' },
   };
 
+  // Merchant mark: a monogram tile tinted by category, used instead of emoji next to purchases.
+  R.initials = function (name) {
+    const words = String(name || '').replace(/[^A-Za-z0-9 ]/g, ' ').trim().split(/\s+/).filter(Boolean);
+    if (!words.length) return '·';
+    return (words.length > 1 ? words[0][0] + words[1][0] : words[0][0]).toUpperCase();
+  };
+  R.mark = (merchant, category, cls = '') =>
+    `<span class="mark ${cls}" style="--c:${(R.CATEGORIES[category] || R.CATEGORIES.Other).color}" aria-hidden="true">${R.initials(merchant)}</span>`;
+
   // hours: m=morning l=lunch e=evening n=night(late) a=any
   const M = {
     'Starbucks':        { cat: 'Coffee', min: 4.75, max: 8.95, h: 'm' },
