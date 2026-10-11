@@ -62,7 +62,7 @@ Run the focused regression suite with `node --test tests/regressions.test.js tes
 
 ## Gemini
 
-Open ⚙️ Settings, paste a key from https://aistudio.google.com/apikey, and hit *test connection*. The default model is `gemini-3.8-flash` (`gemini-2.5-*` is closed to new keys). When it's overloaded, the app retries once and then falls back to `gemini-3.5-flash`. Gemini then powers:
+Open ⚙️ Settings, paste a key from https://aistudio.google.com/apikey, and hit *test connection*. The default model is `gemini-3.5-flash` (`gemini-2.5-*` is closed to new keys). If it's overloaded or missing, the app switches straight to `gemini-3.8-flash`, then retries once. Gemini then powers:
 
 - personalized roasts (Wrapped slide, friend profiles, roast board)
 - the glow-up plan (structured JSON output)

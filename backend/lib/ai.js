@@ -2,8 +2,8 @@
 // Keys come from GEMINI_API_KEY / ELEVENLABS_API_KEY and never reach the browser.
 import { json } from './db.js';
 
-export const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
-const GEMINI_FALLBACK = 'gemini-3.5-flash';
+export const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
+const GEMINI_FALLBACK = GEMINI_MODEL === 'gemini-3.8-flash' ? 'gemini-3.5-flash' : 'gemini-3.8-flash';
 export const ELEVEN_VOICE = process.env.ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM';
 
 export const aiStatus = () => ({ gemini: Boolean(process.env.GEMINI_API_KEY), voice: Boolean(process.env.ELEVENLABS_API_KEY) });
@@ -55,9 +55,9 @@ export async function gemini(prompt, { json: wantJson = false, temperature = 1 }
     signal: AbortSignal.timeout(45_000),
   });
   let res = await call(GEMINI_MODEL);
-  for (const next of [GEMINI_MODEL, GEMINI_FALLBACK]) {
-    if (res.status !== 429 && res.status !== 503) break;
-    await new Promise((r) => setTimeout(r, 1200));
+  for (const [next, wait] of [[GEMINI_FALLBACK, 0], [GEMINI_MODEL, 1500]]) {
+    if (![404, 429, 503].includes(res.status)) break;
+    if (wait) await new Promise((r) => setTimeout(r, wait));
     res = await call(next);
   }
   if (!res.ok) throw Object.assign(new Error(`Gemini ${res.status}`), { upstream: res.status, detail: (await res.text()).slice(0, 300) });

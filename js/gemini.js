@@ -6,8 +6,9 @@
   const R = (global.R = global.R || {});
   const LS = 'receipts.gemini';
   // gemini-2.5-* is closed to new API keys, so older saved configs are moved onto the current default.
-  const DEFAULT_MODEL = 'gemini-3.8-flash';
-  const FALLBACK_MODEL = 'gemini-3.5-flash';
+  // 3.5-flash is the steady one; 3.8-flash is newer but often returns 503 under load, so it's the backup.
+  const DEFAULT_MODEL = 'gemini-3.5-flash';
+  const BACKUP_MODEL = 'gemini-3.8-flash';
   const RETIRED = /^gemini-(1\.|2\.0|2\.5)/;
 
   R.gemini = {
@@ -47,11 +48,12 @@
       const call = (m) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, body,
       });
-      // Overload (429/503) is common on new models: retry once, then try the previous flash before giving up.
+      // Overloaded (429/503) or unknown (404) model: switch to the other flash right away, then one delayed retry.
+      const other = model === DEFAULT_MODEL ? BACKUP_MODEL : DEFAULT_MODEL;
       let res = await call(model);
-      for (const next of [model, FALLBACK_MODEL]) {
-        if (res.status !== 429 && res.status !== 503) break;
-        await new Promise((r) => setTimeout(r, 1200));
+      for (const [next, wait] of [[other, 0], [model, 1500]]) {
+        if (![404, 429, 503].includes(res.status)) break;
+        if (wait) await new Promise((r) => setTimeout(r, wait));
         res = await call(next);
       }
       if (!res.ok) throw new Error(`Gemini ${res.status}: ${(await res.text()).slice(0, 160)}`);
