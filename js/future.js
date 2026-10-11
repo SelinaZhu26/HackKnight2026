@@ -226,7 +226,7 @@ Goal: ${JSON.stringify(String(text).slice(0, 200))}`;
          <div class="fc-big num">${money(p.total, 0)}</div>
          <div class="fc-sub"><span class="chg">≈ ${money(p.total / h.days, 0)}/day</span> 80% chance it lands between ${money(p.lo, 0)} and ${money(p.hi, 0)}</div>`;
     const subs = p.subs.length ? `<div class="drv"><span class="em">🔁</span><span class="grow"><b>${p.subs.length} subscription${p.subs.length > 1 ? 's' : ''} hit</b><small>${esc(p.subs.slice(0, 3).map((s) => s.merchant).join(', '))}${p.subs.length > 3 ? '…' : ''} · locked in</small></span><b class="num">${money(p.recurringTotal, 0)}</b></div>` : '';
-    const drivers = p.drivers.map((d) => `<div class="drv"><span class="em">${R.CATEGORIES[d.category]?.emoji || '🧾'}</span><span class="grow"><b>${esc(d.merchant)}</b><small>~${d.times < 10 ? d.times.toFixed(1) : Math.round(d.times)}× at ${money(d.avg)}</small></span><b class="num">${money(d.cost, 0)}</b></div>`).join('');
+    const drivers = p.drivers.map((d) => `<div class="drv">${R.mark(d.merchant, d.category)}<span class="grow"><b>${esc(d.merchant)}</b><small>~${d.times < 10 ? d.times.toFixed(1) : Math.round(d.times)}× at ${money(d.avg)}</small></span><b class="num">${money(d.cost, 0)}</b></div>`).join('');
     const pay = bal && p.income > 0 ? `<div class="drv"><span class="em">💸</span><span class="grow"><b>paychecks + money in</b><small>${esc(M.schedules.map((s) => `${s.source} · ${s.freq}`).join(', ') || 'average deposits')}</small></span><b class="num pos">+${money(p.income, 0)}</b></div>` : '';
     box.innerHTML = `${head}${lowData()}
       <div class="chart-wrap">${chartSVG(hist, p, bal)}<div class="chart-tip" hidden></div></div>
@@ -364,7 +364,7 @@ Goal: ${JSON.stringify(String(text).slice(0, 200))}`;
     box.innerHTML = `<div class="fw-h"><h3>🔁 1 decision → ${taps || 'many'}</h3></div>
       <p class="fw-sub">money is easy to spend because it’s one small yes at a time. here’s what each of those yeses turns into over a year.</p>
       ${hs.map((h, i) => `<button class="rp" data-fx="ripple" data-i="${i}">
-        <div class="rp-top"><span class="em">${R.CATEGORIES[h.category]?.emoji || '🧾'}</span><span class="grow"><b>one ${esc(h.merchant)}</b><small>${money(h.avg)} · feels like nothing</small></span>
+        <div class="rp-top">${R.mark(h.merchant, h.category)}<span class="grow"><b>one ${esc(h.merchant)}</b><small>${money(h.avg)} · feels like nothing</small></span>
           <span class="rp-x">× ${Math.round(h.perMonth * 12)}/yr</span><b class="rp-y num">${money(h.yearly, 0)}</b></div>
         <div class="dots">${Array.from({ length: Math.min(36, Math.round(h.perMonth * 12 / 4)) }, (_, k) => `<i style="animation-delay:${k * 18}ms"></i>`).join('')}</div>
         <div class="rp-what" hidden>✂️ do it half as often → keep <b>${money(h.yearly / 2, 0)}</b> a year. that’s ${ideas(h.yearly / 2)}.</div></button>`).join('') || '<p class="muted">no repeat habits yet. impressive tbh.</p>'}
@@ -455,7 +455,7 @@ Goal: ${JSON.stringify(String(text).slice(0, 200))}`;
     L.push({ t: 'dash' });
     if (!day.items.length) L.push({ t: 'c', v: '🏆 NO-SPEND DAY 🏆' }, { t: 'c', v: 'literally $0. iconic.', s: 1 });
     for (const t of day.items) {
-      L.push({ t: 'row', a: `${R.CATEGORIES[t.category]?.emoji || '🧾'} ${t.merchant.toUpperCase()}`, b: money(t.amount) });
+      L.push({ t: 'row', a: t.merchant.toUpperCase(), b: money(t.amount) });
       L.push({ t: 'sub', v: [timeOf(t), t.category.toUpperCase()].filter(Boolean).join(' · ') });
     }
     L.push({ t: 'dash' });

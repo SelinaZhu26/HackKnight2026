@@ -38,7 +38,7 @@
       return { person, a };
     });
     if (!S.squads) S.squads = DEFAULT_SQUADS;
-    if (!S.feed) S.feed = seedFeed();
+    if (!S.feed || S.feedV !== 2) { S.feed = seedFeed(); S.feedV = 2; } // v1 was the bot-roast board
     cloudSync();
   }
 
@@ -86,7 +86,7 @@
       el.classList.remove('on'); setTimeout(() => el.remove(), 300);
     });
   }
-  const avatar = (p, cls = '') => `<div class="avatar ${cls}" style="background:${p.color}">${p.emoji}</div>`;
+  const avatar = (p, cls = '') => `<div class="avatar ${cls}" style="background:${p.color}">${esc(R.initials(p.id === 'me' ? displayName() : p.name))}</div>`;
   const gradeColor = (g) => ({ A: '#6fdba8', B: '#b5e48c', C: '#ffd97a', D: '#ffa173', F: '#ff6b81' }[g]);
   const b64 = { enc: (o) => btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
     dec: (s) => JSON.parse(decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))))) };
@@ -420,8 +420,9 @@
   }
 
   // ---------- shell ----------
-  const TABS = [['home', '🧾', 'Wrapped'], ['future', '🔮', 'Future'], ['learn', '🎓', 'Learn'], ['friends', '👯', 'Friends'], ['squads', '🤝', 'Squads'], ['roasts', '<i class="mochi" aria-hidden="true"></i>', 'Roasts']];
+  const TABS = [['home', '🧾', 'Wrapped'], ['future', '🔮', 'Future'], ['learn', '🎓', 'Learn'], ['friends', '👯', 'Friends'], ['squads', '🤝', 'Squads'], ['feed', '<i class="mochi" aria-hidden="true"></i>', 'Feed']];
   function renderShell(page) {
+    if (page === 'roasts') page = 'feed'; // old links
     if (!TABS.some((t) => t[0] === page)) page = 'home';
     phone.innerHTML = `
       <div class="topbar"><div class="logo"><span class="mochi" aria-hidden="true"></span>mochi<b>i</b><span class="club">club</span></div>
@@ -429,7 +430,7 @@
       <main class="screen" id="screen"></main>
       <nav class="tabbar">${TABS.map(([id, ic, lb]) => `<a class="tab ${id === page ? 'on' : ''}" href="#/${id}"><span>${ic}</span>${lb}</a>`).join('')}</nav>`;
     const screen = $('#screen', phone);
-    ({ home: renderHome, future: renderFuture, learn: renderLearn, friends: renderFriends, squads: renderSquads, roasts: renderRoasts })[page](screen);
+    ({ home: renderHome, future: renderFuture, learn: renderLearn, friends: renderFriends, squads: renderSquads, feed: renderFeed })[page](screen);
   }
 
   // ---------- LEARN (js/learn.js) ----------
@@ -495,10 +496,8 @@
           <div class="bar"><i style="width:${a.byCat[0].amt > 0 ? (c.amt / a.byCat[0].amt) * 100 : 0}%;background:${R.CATEGORIES[c.cat].color}"></i></div></div>`;
       }).join('')}</div>
 
-      <div class="section-h"><h3>recent</h3><small>${S.source === 'csv' ? 'from your CSV' : 'demo bank'} · tap to get roasted</small></div>
-      <div class="card" style="padding:6px 16px">${recentTxns().map((t, i) => `<div class="txn"><div class="ic">${R.CATEGORIES[t.category]?.emoji || '🧾'}</div>
-        <div class="grow"><b>${esc(t.merchant)}</b><small>${new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}${t.noTime ? '' : ' · ' + new Date(t.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</small></div>
-        <div style="text-align:right"><div class="amt num">${money(t.amount)}</div><button class="roast-it" data-act="roastTxn" data-i="${i}">🔥 roast</button></div></div>`).join('')}</div>
+      <div class="section-h"><h3>your recent purchases</h3><small>${S.source === 'csv' ? 'from your CSV' : 'demo bank'}</small></div>
+      <div class="card" style="padding:6px 16px">${recentTxns().map(txnRow).join('')}</div>
       <button class="btn block ghost" style="margin-top:12px" data-act="gmail">📧 add a receipt from email</button>
       ${S.source === 'csv' ? '' : `<div class="byo" data-act="import"><span class="em">📄</span><div class="grow"><b>this is demo money 👀</b><small>drop your real bank CSV for your actual wrapped</small></div><span class="arrow">→</span></div>`}`;
     renderCalendar();
@@ -557,7 +556,7 @@
           <b>${selDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</b>
           <b class="num" style="color:var(--lime)">${money(sel.amt)}</b>
         </div>
-        ${sel.txns.length ? sel.txns.sort((a, b) => a.date.localeCompare(b.date)).map((t) => `<div class="txn"><div class="ic">${R.CATEGORIES[t.category]?.emoji || '🧾'}</div>
+        ${sel.txns.length ? sel.txns.sort((a, b) => a.date.localeCompare(b.date)).map((t) => `<div class="txn">${R.mark(t.merchant, t.category)}
           <div class="grow"><b>${esc(t.merchant)}</b><small>${esc(t.category)}${t.noTime ? '' : ' · ' + new Date(t.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</small></div>
           <div class="amt num">${money(t.amount)}</div></div>`).join('')
           : '<p class="muted" style="padding:10px 0;font-size:14px">no-spend day ✨ your wallet got to rest.</p>'}
@@ -568,6 +567,9 @@
     const all = myTxns().filter((t) => !t.recurring);
     return all.sort((x, y) => y.date.localeCompare(x.date)).slice(0, 10);
   };
+  const txnRow = (t, i) => `<div class="txn">${R.mark(t.merchant, t.category)}
+    <div class="grow"><b>${esc(t.merchant)}</b><small>${new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}${t.noTime ? '' : ' · ' + new Date(t.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</small></div>
+    <div style="text-align:right"><div class="amt num">${money(t.amount)}</div><button class="chip-btn" data-act="shareTxn" data-i="${i}">share</button></div></div>`;
 
   async function showPlan(btn) {
     const box = $('#plan'); btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> cooking…';
@@ -617,18 +619,13 @@
       </div>
       <div class="cats">${a.byCat.slice(0, 3).map((c) => `<div class="cat-row"><div class="top"><span>${R.CATEGORIES[c.cat].emoji} ${esc(c.cat)}</span><span class="num">${money(c.amt, 0)}</span></div><div class="bar"><i style="width:${a.byCat[0].amt > 0 ? (c.amt / a.byCat[0].amt) * 100 : 0}%;background:${R.CATEGORIES[c.cat].color}"></i></div></div>`).join('')}</div>
       <p class="muted" style="margin-top:14px;font-size:14px">${a.topMerchant && a.mostVisited ? `top merchant: <b style="color:#fff">${esc(a.topMerchant.name)}</b> (${money(a.topMerchant.amt, 0)}) · on repeat: <b style="color:#fff">${esc(a.mostVisited.name)} ×${a.mostVisited.count}</b>` : 'no non-subscription spending this month'}${a.subs.length ? `<br>subscriptions: ${a.subs.map((s) => `${esc(s.name)} (${money(s.amt)})`).join(', ')}` : ''}</p>
-      <div id="pr" class="card" style="margin-top:14px;display:none"></div>
       <div class="share-actions">
         <button class="btn" data-x="wrap">▶ their wrapped</button>
-        ${id !== 'me' ? `<button class="btn ghost" data-x="roast">🔥 roast</button><button class="btn ghost" data-x="nudge">👀 nudge</button>` : ''}
+        ${id !== 'me' ? `<button class="btn ghost" data-x="posts">their posts</button><button class="btn ghost" data-x="nudge">👀 nudge</button>` : ''}
       </div>`, (sh) => {
       sh.querySelector('[data-x=wrap]').onclick = () => { closeSheet(); playSolo(id); };
-      const r = sh.querySelector('[data-x=roast]');
-      if (r) r.onclick = async () => {
-        const box = $('#pr', sh); box.style.display = 'block'; box.innerHTML = '<span class="spinner"></span>';
-        const txt = await R.ai.roast(a, p.name);
-        box.innerHTML = `<div style="font-weight:700;font-size:16px;line-height:1.35">${esc(txt)}</div>`;
-      };
+      const r = sh.querySelector('[data-x=posts]');
+      if (r) r.onclick = () => { closeSheet(); goFeed({ tab: 'friends', who: id }); };
       const n = sh.querySelector('[data-x=nudge]');
       if (n) n.onclick = () => { toast(`nudged ${p.name}: “put the phone down” 📵`); closeSheet(); };
     });
@@ -820,61 +817,110 @@
     });
   }
 
-  // ---------- ROASTS ----------
+  // ---------- FEED ----------
+  // Friends' purchases, one post per screen: their photo (or a merchant tile), caption, and the group chat's reactions.
+  const REACTS = ['❤️', '💀', '😭', '👀'];
   function seedFeed() {
     const pick = (id, f) => DATA[id].filter((t) => !t.recurring && t.date.startsWith('2026-09')).sort(f)[0];
     const biggest = (x, y) => y.amount - x.amount;
-    const lateOne = (id, m) => DATA[id].filter((t) => t.merchant === m && [0, 1, 2, 3].includes(new Date(t.date).getHours()))[0] || pick(id, biggest);
+    const prefer = (m) => (x, y) => (y.merchant === m) - (x.merchant === m) || y.amount - x.amount;
+    const late = (id, m) => DATA[id].filter((t) => t.merchant === m && [0, 1, 2, 3].includes(new Date(t.date).getHours()))[0] || pick(id, biggest);
     return [
-      { who: 'priya', t: pick('priya', biggest), roast: 'the receipt says “final sale.” so does your savings account.', by: 'Gemini', reacts: { '💀': 14, '🔥': 6, '😭': 9, '🧢': 3 }, comments: [{ who: 'marcus', text: 'it was NOT on sale 💀' }, { who: 'priya', text: 'it was spiritually on sale' }] },
-      { who: 'marcus', t: lateOne('marcus', 'DoorDash'), roast: 'a 1am doordash isn’t a meal, it’s a cry for help. the dasher knows your dog’s name.', by: 'Gemini', reacts: { '💀': 22, '🔥': 4, '😭': 11, '🧢': 0 }, comments: [{ who: 'maya', text: 'the kitchen is RIGHT there' }] },
-      { who: 'jordan', t: pick('jordan', (x, y) => (y.merchant === 'Uber') - (x.merchant === 'Uber') || y.amount - x.amount), roast: 'paying uber surge pricing to go somewhere you’ll spend more money. the circle of broke.', by: 'Dev', reacts: { '💀': 8, '🔥': 12, '😭': 2, '🧢': 1 }, comments: [] },
-      { who: 'dev', t: pick('dev', (x, y) => (y.merchant === 'Steam') - (x.merchant === 'Steam') || y.amount - x.amount), roast: 'another game for the backlog. your steam library has more unplayed titles than your bank has dollars.', by: 'Gemini', reacts: { '💀': 10, '🔥': 3, '😭': 5, '🧢': 0 }, comments: [{ who: 'jordan', text: 'he’s gonna play it for 11 minutes' }] },
-      { who: 'maya', t: pick('maya', biggest), roast: 'biggest purchase of the month is… groceries. boring. responsible. we hate it here (proud of you).', by: 'Priya', reacts: { '💀': 2, '🔥': 19, '😭': 1, '🧢': 0 }, comments: [{ who: 'priya', text: 'teach me your ways' }] },
-    ].map((p, i) => ({ id: 'seed' + i, who: p.who, merchant: p.t.merchant, amount: p.t.amount, category: p.t.category, date: p.t.date, note: p.t.note, roast: p.roast, by: p.by, reacts: p.reacts, mine: {}, comments: p.comments }));
+      { who: 'priya', t: pick('priya', biggest), caption: 'it was on sale. spiritually.', reacts: [14, 9, 6, 3], comments: [['marcus', 'the receipt says final sale. so does your savings account'], ['maya', 'ok but it’s cute']] },
+      { who: 'marcus', t: late('marcus', 'DoorDash'), caption: '1am. no regrets (some regrets)', reacts: [6, 22, 11, 4], comments: [['maya', 'the kitchen is RIGHT there'], ['jordan', 'the dasher knows your dog’s name at this point']] },
+      { who: 'maya', t: pick('maya', biggest), caption: 'biggest purchase this month: groceries. i’m thriving', reacts: [19, 2, 1, 0], comments: [['priya', 'teach me your ways']] },
+      { who: 'jordan', t: pick('jordan', prefer('Uber')), caption: 'surge pricing but i was late ok', reacts: [3, 8, 2, 12], comments: [['dev', 'paying surge to go spend more money. the circle of broke']] },
+      { who: 'dev', t: pick('dev', prefer('Steam')), caption: '70% off. it would’ve been irresponsible not to', reacts: [5, 10, 5, 2], comments: [['jordan', 'he’s gonna play it for 11 minutes'], ['marcus', 'straight to the backlog']] },
+    ].map((p, i) => ({ id: 'seed' + i, who: p.who, merchant: p.t.merchant, amount: p.t.amount, category: p.t.category, date: p.t.date, posted: p.t.date,
+      caption: p.caption, photo: null, reacts: Object.fromEntries(REACTS.map((e, j) => [e, p.reacts[j]])), mine: {}, comments: p.comments.map(([who, text]) => ({ who, text })) }));
   }
 
-  function renderRoasts(el) {
+  let feedView = { tab: 'friends', who: null };
+  function goFeed(view) {
+    feedView = { tab: 'friends', who: null, ...view };
+    if (location.hash === '#/feed') route(); else location.hash = '#/feed';
+  }
+  const when = (d) => { const x = new Date(d); return `${x.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · ${x.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`; };
+
+  function postCard(p) {
+    const person = personById(p.who).person;
+    const name = p.who === 'me' ? displayName() : person.name;
+    const color = (R.CATEGORIES[p.category] || R.CATEGORIES.Other).color;
+    return `<article class="fpost" data-id="${p.id}">
+      <div class="fmedia" style="--c:${color}">${p.photo ? `<img src="${esc(p.photo)}" alt="${esc(name)}’s photo from ${esc(p.merchant)}">`
+        : `<div class="fph">${R.mark(p.merchant, p.category, 'xl')}<span>${esc(p.merchant)}</span></div>`}
+        <div class="ftag"><b class="num">${money(p.amount)}</b><span>${esc(p.category)}</span></div></div>
+      <div class="fbody">
+        <div class="who" data-act="profile" data-id="${p.who}">${avatar(person)}<div class="grow"><b>${esc(name)}</b><small>bought at ${esc(p.merchant)} · ${when(p.date)}</small></div></div>
+        ${p.caption ? `<p class="fcap">${esc(p.caption)}</p>` : ''}
+        <div class="reacts">${REACTS.map((e) => `<button class="react ${p.mine[e] ? 'on' : ''}" data-act="react" data-e="${e}">${e} ${(p.reacts[e] || 0) + (p.mine[e] ? 1 : 0)}</button>`).join('')}</div>
+        <div class="comments">${p.comments.slice(-3).map((c) => `<p><b>${esc(nameOf(c.who))}</b>${esc(c.text)}</p>`).join('')}</div>
+        <form class="comment-box" data-act="comment"><input class="input" placeholder="say something…" maxlength="120"><button class="btn sm">send</button></form>
+      </div></article>`;
+  }
+
+  function renderFeed(el) {
+    const mine = feedView.tab === 'mine';
+    const posts = S.feed.filter((p) => (mine ? p.who === 'me' : !feedView.who || p.who === feedView.who))
+      .sort((x, y) => (y.posted || y.date).localeCompare(x.posted || x.date));
     el.innerHTML = `
-      <h1 class="title">roast board</h1>
-      <p class="muted" style="margin:-8px 4px 16px">confess a purchase. let the group chat (and Gemini) judge.</p>
-      <button class="btn block" data-act="confess">🙏 confess a purchase</button>
-      ${S.feed.map((p) => {
-        const person = personById(p.who).person;
-        return `<div class="card post" style="margin-top:12px" data-id="${p.id}">
-        <div class="who">${avatar(person)}<div class="grow"><b>${esc(p.who === 'me' ? displayName() : person.name)}</b><small>${esc(person.handle)} · ${new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</small></div><span class="pill">${R.CATEGORIES[p.category]?.emoji || '🧾'} ${esc(p.category)}</span></div>
-        <div class="receipt"><div class="line"><span>${esc(String(p.merchant).toUpperCase())}</span><span>${new Date(p.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span></div>
-          ${p.note ? `<div style="margin-top:6px;opacity:.7">“${esc(p.note)}”</div>` : ''}
-          <div class="line tot"><span>TOTAL</span><span>${money(p.amount)}</span></div></div>
-        <div class="roast">${esc(p.roast)}<span class="by">— roasted by ${esc(p.by)}</span></div>
-        <div class="reacts">${Object.entries(p.reacts).map(([e, n]) => `<button class="react ${p.mine[e] ? 'on' : ''}" data-act="react" data-e="${e}">${e} ${n + (p.mine[e] ? 1 : 0)}</button>`).join('')}</div>
-        <div class="comments">${p.comments.map((c) => `<p><b>${esc(nameOf(c.who))}</b>${esc(c.text)}</p>`).join('')}</div>
-        <form class="comment-box" data-act="comment"><input class="input" placeholder="add a roast…" maxlength="120"><button class="btn sm">send</button></form>
-      </div>`;
-      }).join('')}`;
+      <div class="feed-head">
+        <div class="seg">${[['friends', 'friends'], ['mine', 'you']].map(([k, l]) => `<button class="${feedView.tab === k ? 'on' : ''}" data-act="feedTab" data-tab="${k}">${l}</button>`).join('')}</div>
+        <button class="btn sm" data-act="newPost">+ post</button>
+      </div>
+      ${feedView.who ? `<div class="feed-filter"><span>${esc(nameOf(feedView.who))}’s posts</span><button class="chip-btn" data-act="feedTab" data-tab="friends">show everyone</button></div>` : ''}
+      ${mine ? `<div class="section-h"><h3>your recent purchases</h3><small>share one with friends</small></div>
+          <div class="card" style="padding:6px 16px">${recentTxns().map(txnRow).join('')}</div>
+          ${posts.length ? `<div class="section-h"><h3>your posts</h3></div>${posts.map(postCard).join('')}` : ''}`
+        : posts.length ? posts.map(postCard).join('') : '<p class="muted" style="margin-top:20px">no posts yet.</p>'}`;
+    if (!mine) {
+      // One post per screen, snapping like a short-video feed.
+      el.classList.add('feed-snap');
+      el.style.setProperty('--post-h', `${Math.max(420, el.clientHeight - 180)}px`); // minus sticky header and tab bar
+    }
   }
 
-  async function postRoast(t, who = 'me') {
-    toast('roasting… 🔥');
-    const roast = await R.ai.roastPurchase(t, who === 'me' ? 'this person' : nameOf(who));
-    S.feed.unshift({ id: 'p' + Date.now(), who, merchant: t.merchant, amount: t.amount, category: t.category, date: t.date, note: t.note,
-      roast, by: R.gemini.enabled ? 'Gemini' : 'roast bot', reacts: { '💀': 0, '🔥': 0, '😭': 0, '🧢': 0 }, mine: {},
-      comments: [{ who: 'marcus', text: 'LMAOOO' }] });
-    save(); location.hash = '#/roasts'; route();
+  // Phone photos are downscaled to a small JPEG so a handful fit in localStorage.
+  function shrinkPhoto(file, max = 720) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        const k = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        resolve(c.toDataURL('image/jpeg', 0.72));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('unreadable image')); };
+      img.src = url;
+    });
   }
-  function confessSheet() {
-    sheet(`<h3>confess 🙏</h3><p class="sub">what did you buy. be honest. the group chat will know.</p>
-      <div class="field"><label>where</label><input class="input" id="cfM" placeholder="e.g. Sephora"></div>
-      <div class="row" style="gap:10px"><div class="field grow"><label>how much ($)</label><input class="input" id="cfA" type="number" step="0.01" placeholder="49.99"></div>
-        <div class="field grow"><label>category</label><select class="input" id="cfC">${Object.keys(R.CATEGORIES).map((c) => `<option>${c}</option>`).join('')}</select></div></div>
-      <div class="field"><label>your defense (optional)</label><input class="input" id="cfN" placeholder="it was on sale"></div>
-      <button class="btn block" id="cfGo">get roasted 🔥</button>`, (sh) => {
-      $('#cfM', sh).oninput = (e) => { const c = R.categorize(e.target.value); if (c !== 'Other') $('#cfC', sh).value = c; };
-      $('#cfGo', sh).onclick = () => {
-        const m = $('#cfM', sh).value.trim(); const amt = parseFloat($('#cfA', sh).value);
+  function prunePhotos() { let n = 0; for (const p of S.feed) if (p.photo && ++n > 8) p.photo = null; }
+
+  function postSheet(t = {}) {
+    let photo = null;
+    sheet(`<h3>post a purchase</h3><p class="sub">your friends see it in their feed. a photo is optional.</p>
+      <label class="photo-pick"><input type="file" accept="image/*" id="pfFile" hidden><span id="pfPrev">📷 add a photo</span></label>
+      <div class="field"><label>where</label><input class="input" id="pfM" value="${esc(t.merchant || '')}" placeholder="e.g. Sephora"></div>
+      <div class="row" style="gap:10px"><div class="field grow"><label>how much ($)</label><input class="input" id="pfA" type="number" min="0.01" step="0.01" value="${t.amount ?? ''}" placeholder="49.99"></div>
+        <div class="field grow"><label>category</label><select class="input" id="pfC">${Object.keys(R.CATEGORIES).map((c) => `<option ${c === t.category ? 'selected' : ''}>${c}</option>`).join('')}</select></div></div>
+      <div class="field"><label>caption</label><input class="input" id="pfN" maxlength="120" placeholder="it was on sale (it was not)"></div>
+      <button class="btn block" id="pfGo">post to friends</button>`, (sh) => {
+      $('#pfM', sh).oninput = (e) => { const c = R.categorize(e.target.value); if (c !== 'Other') $('#pfC', sh).value = c; };
+      $('#pfFile', sh).onchange = async (e) => {
+        const f = e.target.files[0]; if (!f) return;
+        try { photo = await shrinkPhoto(f); $('#pfPrev', sh).innerHTML = `<img src="${photo}" alt="your photo">`; }
+        catch { toast('couldn’t read that photo'); }
+      };
+      $('#pfGo', sh).onclick = () => {
+        const m = $('#pfM', sh).value.trim(); const amt = parseFloat($('#pfA', sh).value);
         if (!m || !Number.isFinite(amt) || !(amt > 0)) return toast('need a place and a positive amount');
-        closeSheet();
-        postRoast({ merchant: m, amount: amt, category: $('#cfC', sh).value, date: new Date().toISOString(), note: $('#cfN', sh).value.trim() || undefined });
+        const now = new Date().toISOString();
+        S.feed.unshift({ id: 'p' + Date.now(), who: 'me', merchant: m.slice(0, 40), amount: +amt.toFixed(2), category: $('#pfC', sh).value, date: t.date || now, posted: now,
+          caption: $('#pfN', sh).value.trim(), photo, reacts: Object.fromEntries(REACTS.map((e) => [e, 0])), mine: {}, comments: [] });
+        prunePhotos(); save(); closeSheet(); goFeed({ tab: 'friends' }); toast('posted ✓');
       };
     });
   }
@@ -1000,7 +1046,9 @@
     else if (act === 'import') openImporter();
     else if (act === 'plan') showPlan(t);
     else if (act === 'challenge') { S.challenge = { target: Math.round(A.me.prediction * 0.9), month: A.me.nextLabel }; save(); route(); toast('challenge locked in 🔒'); }
-    else if (act === 'roastTxn') postRoast(recentTxns()[+t.dataset.i]);
+    else if (act === 'shareTxn') postSheet(recentTxns()[+t.dataset.i]);
+    else if (act === 'newPost') postSheet();
+    else if (act === 'feedTab') { feedView = { tab: t.dataset.tab, who: null }; route(); }
     else if (act === 'profile') openProfile(t.dataset.id);
     else if (act === 'invite') { copy(`${baseUrl()}#/welcome`); toast('invite link copied 🔗'); }
     else if (act === 'newSquad') newSquadSheet();
@@ -1011,7 +1059,6 @@
     else if (act === 'potSettle') settlePot(t.dataset.code);
     else if (act === 'potReceipt') potReceiptSheet(t.dataset.code);
     else if (act === 'invSquad') { copy(`${baseUrl()}#/join/${t.dataset.code}`); toast(`invite copied · code ${t.dataset.code}`); }
-    else if (act === 'confess') confessSheet();
     else if (act === 'calDay') { cal.day = +t.dataset.d; renderCalendar(); }
     else if (act === 'calNav') {
       const months = [...new Set(myTxns().map((x) => localKey(new Date(x.date))))].sort();
@@ -1019,16 +1066,16 @@
       if (next) { cal.month = next; cal.day = null; renderCalendar(); }
     }
     else if (act === 'react') {
-      const p = S.feed.find((x) => x.id === t.closest('.post').dataset.id); const em = t.dataset.e;
+      const p = S.feed.find((x) => x.id === t.closest('.fpost').dataset.id); const em = t.dataset.e;
       p.mine[em] = !p.mine[em]; save();
-      t.classList.toggle('on', p.mine[em]); t.textContent = `${em} ${p.reacts[em] + (p.mine[em] ? 1 : 0)}`;
+      t.classList.toggle('on', p.mine[em]); t.textContent = `${em} ${(p.reacts[em] || 0) + (p.mine[em] ? 1 : 0)}`;
     }
   });
   phone.addEventListener('submit', (e) => {
     const f = e.target.closest('[data-act=comment]'); if (!f) return;
     e.preventDefault();
     const inp = f.querySelector('input'); const text = inp.value.trim(); if (!text) return;
-    const p = S.feed.find((x) => x.id === f.closest('.post').dataset.id);
+    const p = S.feed.find((x) => x.id === f.closest('.fpost').dataset.id);
     p.comments.push({ who: 'me', text }); save();
     f.previousElementSibling.insertAdjacentHTML('beforeend', `<p><b>${esc(displayName())}</b>${esc(text)}</p>`);
     inp.value = '';

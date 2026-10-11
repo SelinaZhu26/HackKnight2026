@@ -53,9 +53,9 @@ Run the focused regression suite with `node --test tests/regressions.test.js tes
 | **Spending calendar** 📅 | Month grid on Home, with each day shaded by how much you spent. Tap a day to see its transactions, and switch months with the arrows. It opens on your most expensive day |
 | **Health score** | 0–100 score with a letter grade, built from budget, trend, impulse control, subscriptions, and cooking at home |
 | **Friends Wrapped** 👯 | Group total, "most likely to…" superlatives (Starbucks tattoo, DoorDash first-name basis, The Saver…), and a health-score leaderboard |
-| **Friend profiles** | Their aura, categories, and score. Play *their* Wrapped, roast them, or nudge them |
+| **Friend profiles** | Their aura, categories, and score. Play *their* Wrapped, see their posts, or nudge them |
 | **Squads** 🤝 | Accountability groups with a category cap, stakes ("loser buys boba"), live on-track bars, and invite links / join codes (try `GYMRAT`) |
-| **Roast board** 🔥 | Confess a purchase and get roasted by Gemini. Friends react 💀🔥😭🧢 and comment |
+| **Feed** | Swipe through friends' purchases one per screen, each with their name, photo (or a merchant tile), and caption. Friends react ❤️💀😭👀 and comment. Post your own from Home or the feed, with an optional photo. The "you" tab lists your recent purchases |
 | **Sharing** 🔗 | Shareable link (`#/share/…` with the summary encoded in the URL) and a 1080×1920 PNG story card |
 | **Data in** | Demo bank (3 months, 6 people), **CSV import** (below), or **Gmail receipts** (MCP + Gemini flow, plus a live "paste a receipt email → Gemini extracts it" parser) |
 | **CSV import** 📄 | 3-step flow: drag and drop (or tap) a bank CSV, or load the **⚡ sample statement** with one tap. Then an animated "reading your receipts" step, then a review screen with totals, a category breakdown, and tap-to-fix categories for merchants we couldn't place. Messy bank descriptors are cleaned up (`SQ *BLUE BOTTLE #12` becomes Blue Bottle), deposits are skipped, the purchase sign is auto-detected with a toggle to flip it, and repeat charges are flagged as subscriptions. Works from onboarding, Settings, the Home card, or by dropping a file anywhere |
@@ -64,7 +64,7 @@ Run the focused regression suite with `node --test tests/regressions.test.js tes
 
 Open ⚙️ Settings, paste a key from https://aistudio.google.com/apikey, and hit *test connection*. The default model is `gemini-3.5-flash` (`gemini-2.5-*` is closed to new keys). If it's overloaded or missing, the app switches straight to `gemini-3.8-flash`, then retries once. Gemini then powers:
 
-- personalized roasts (Wrapped slide, friend profiles, roast board)
+- the personalized roast slide in your Wrapped
 - the glow-up plan (structured JSON output)
 - receipt-email parsing into a transaction (the core of the MCP Gmail pipeline)
 - the Learn tutor (grades "explain it" answers by meaning, gives one focused follow-up) and adaptive smart-practice questions
@@ -100,7 +100,7 @@ js/wrapped.js     story player, solo/friends slides, share card + PNG renderer
 js/curriculum.js  the 72-lesson course data (tips, exercises, tutor rubrics) from lesson-plan.md
 js/learn.js       Learn tab: path, lesson player, XP/streaks/hearts/quests/league, Gemini tutor + practice
 js/voice.js       ElevenLabs text-to-speech with a browser-speech fallback
-js/app.js         routing, screens, sheets, squads, roast board, settings, state (localStorage)
+js/app.js         routing, screens, sheets, squads, friends feed, settings, state (localStorage)
 js/solana.js      squad pots: wallet, stake, settle with hash commitments, verify, Blink link (devnet)
 js/whimsy.js      logo hover animation and easter eggs
 backend/app/api/actions/   Solana Actions (Blink) endpoints for squad pots
