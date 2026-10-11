@@ -420,7 +420,7 @@
   }
 
   // ---------- shell ----------
-  const TABS = [['home', '🧾', 'Wrapped'], ['future', '🔮', 'Future'], ['learn', '🎓', 'Learn'], ['friends', '👯', 'Friends'], ['squads', '🤝', 'Squads'], ['roasts', '🔥', 'Roasts']];
+  const TABS = [['home', '🧾', 'Wrapped'], ['future', '🔮', 'Future'], ['learn', '🎓', 'Learn'], ['friends', '👯', 'Friends'], ['squads', '🤝', 'Squads'], ['roasts', '<i class="mochi" aria-hidden="true"></i>', 'Roasts']];
   function renderShell(page) {
     if (!TABS.some((t) => t[0] === page)) page = 'home';
     phone.innerHTML = `
