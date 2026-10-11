@@ -616,6 +616,15 @@ textarea.input { height: 140px; padding: 14px 16px; resize: none; font-size: 14p
 .unit.locked .unit-banner { filter: saturate(0.25) brightness(0.7); }
 
 .path { position: relative; display: flex; flex-direction: column; align-items: center; gap: 22px; padding: 30px 0 8px; }
+.road { position: absolute; left: 0; top: 0; z-index: 0; pointer-events: none; overflow: visible; }
+.road path { fill: none; stroke-linecap: round; }
+.road-base { stroke: #23232c; stroke-width: 26; }
+.road-done { stroke: var(--mint); stroke-width: 26; filter: drop-shadow(0 0 10px rgba(46, 229, 157, 0.35));
+  stroke-dasharray: 1; stroke-dashoffset: 1; animation: drive 1.1s 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+.road-lane { stroke: rgba(255, 255, 255, 0.28); stroke-width: 2.5; stroke-dasharray: 2 12; }
+@keyframes drive { to { stroke-dashoffset: 0; } }
+.node-wrap { z-index: 1; }
+.unit.locked .road-base { opacity: 0.55; }
 .node-wrap:has(.start-tip) { margin-top: 44px; }
 .node-wrap:has(.node-pop) { z-index: 7; }
 .unit-mascot { position: absolute; top: 50%; font-size: 64px; opacity: 0.9; transform: translateY(-50%); animation: float 5s ease-in-out infinite alternate; pointer-events: none; }
@@ -637,9 +646,9 @@ textarea.input { height: 140px; padding: 14px 16px; resize: none; font-size: 14p
 .start-tip { position: absolute; bottom: calc(100% + 12px); padding: 8px 12px; border-radius: 12px; background: var(--surface); border: 2px solid var(--surface-2);
   color: var(--u); font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap; animation: bob 1.6s ease-in-out infinite; }
 .start-tip::after { content: ''; position: absolute; left: 50%; bottom: -8px; width: 12px; height: 12px; background: var(--surface); border: 2px solid var(--surface-2); border-top: 0; border-left: 0; transform: translateX(-50%) rotate(45deg); }
-.stars { position: absolute; top: calc(100% + 4px); display: flex; gap: 1px; font-size: 13px; }
+.stars { position: absolute; top: calc(100% + 4px); display: flex; gap: 1px; font-size: 12px; padding: 1px 6px; border-radius: 999px; background: var(--bg); }
 .node-wrap:has(.stars) { margin-bottom: 8px; }
-.stars i { font-style: normal; color: var(--surface-2); }
+.stars i { font-style: normal; color: #3a3a46; }
 .stars i.on { color: var(--yellow); }
 .node-pop { position: absolute; top: calc(100% + 14px); z-index: 6; width: 250px; padding: 16px; border-radius: 18px; background: var(--u); color: var(--uink);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5); animation: popin 0.3s both; display: flex; flex-direction: column; gap: 4px; }

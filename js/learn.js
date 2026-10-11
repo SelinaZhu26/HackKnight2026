@@ -238,12 +238,40 @@ Mix types. Return JSON {"exercises":[...]} where each item is ONE of:
       ${R.CURRICULUM.map((u) => unitHtml(u, cur)).join('')}
       <div class="path-end">🏁<b>the end… for now</b><small>${R.LESSONS.length} lessons · 12 units</small></div>`;
     requestAnimationFrame(() => setTimeout(() => el.querySelectorAll('[data-off]').forEach((c) => (c.style.strokeDashoffset = c.dataset.off)), 60));
+    requestAnimationFrame(() => drawRoads(el));
     el.onclick = onPathClick;
     const node = el.querySelector('.node.current');
     if (node && cur > 0) setTimeout(() => node.scrollIntoView({ block: 'center', behavior: reduceMotion() ? 'auto' : 'smooth' }), 120);
     const just = el.querySelector(`[data-id="${CSS.escape(L.justUnlocked || '')}"]`);
     if (just) { just.classList.add('unlock-pop'); delete L.justUnlocked; save(); }
   }
+
+  // Road behind each unit's nodes: gray base, green up to the furthest node reached, dashed center line.
+  function drawRoads(el) {
+    el.querySelectorAll('.path').forEach((path) => {
+      path.querySelector('.road')?.remove();
+      const box = path.getBoundingClientRect();
+      const pts = [...path.querySelectorAll('.node')].map((n) => {
+        const r = n.getBoundingClientRect();
+        return { x: r.left + r.width / 2 - box.left, y: r.top + r.height / 2 - box.top, reached: !n.classList.contains('locked') };
+      });
+      if (pts.length < 2) return;
+      const d = (ps) => ps.map((p, i) => {
+        if (!i) return `M${p.x} ${p.y}`;
+        const q = ps[i - 1]; const dy = (p.y - q.y) / 2;
+        return `C${q.x} ${q.y + dy} ${p.x} ${p.y - dy} ${p.x} ${p.y}`;
+      }).join(' ');
+      const reached = pts.filter((p) => p.reached).length;
+      const svg = `<svg class="road" width="${box.width}" height="${path.scrollHeight}" aria-hidden="true">
+        <path class="road-base" d="${d(pts)}"/>
+        ${reached > 1 ? `<path class="road-done" d="${d(pts.slice(0, reached))}" pathLength="1"/>` : ''}
+        <path class="road-lane" d="${d(pts)}"/></svg>`;
+      path.insertAdjacentHTML('afterbegin', svg);
+    });
+  }
+
+  let roadT;
+  global.addEventListener?.('resize', () => { clearTimeout(roadT); roadT = setTimeout(() => { const el = document.querySelector('.screen'); if (el?.querySelector('.path')) drawRoads(el); }, 150); });
 
   function unitHtml(u, cur) {
     const idx0 = R.LESSONS.findIndex((l) => l.id === u.lessons[0].id);

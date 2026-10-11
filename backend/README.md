@@ -2,7 +2,7 @@
 
 A minimal Next.js backend that serves the existing plain HTML/CSS/JavaScript
 frontend. The `/` route returns `index.html` unchanged; Next.js serves
-`/styles.css`, `/js/*`, and `/index.html` from its `public` directory. Existing
+`/styles.css`, `/future.css`, `/js/*`, and `/index.html` from its `public` directory. Existing
 hash routes such as `/#/learn` continue to be handled by the browser.
 
 ## Development
@@ -17,7 +17,7 @@ npm run dev
 Open http://localhost:3000. The server binds to loopback by default.
 
 The dev and build commands automatically copy `../index.html`, `../styles.css`,
-and `../js/` into the generated `public/` directory. Edit the original frontend
+`../future.css`, and `../js/` into the generated `public/` directory. Edit the original frontend
 files. After frontend changes during development, run `npm run sync` to refresh
 the served copies. Do not edit generated copies directly.
 
