@@ -33,17 +33,17 @@
 
   // ---------- personality ("money aura") ----------
   const AURAS = {
-    Coffee:        { title: 'The Caffeinated Capitalist', blurb: 'Your blood type is oat milk. Baristas know your name AND your trauma.', grad: ['#ffa173', '#ffd97a'] },
-    Delivery:      { title: 'The DoorDash Dependent', blurb: 'Your kitchen is decorative. The delivery guy is your closest friend.', grad: ['#ff8fb8', '#ffa173'] },
-    Food:          { title: 'The Snack Strategist', blurb: 'Every meal is a "treat yourself" moment. Every. Single. One.', grad: ['#ffd97a', '#ff8fb8'] },
-    Shopping:      { title: 'The Add-to-Cart Assassin', blurb: 'Your Amazon driver has a key to your building. Probably.', grad: ['#a18bff', '#ff8fb8'] },
-    Beauty:        { title: 'The Glow-Up Investor', blurb: 'Skincare is self-care is a line item. Valid, but expensive.', grad: ['#ff8fc7', '#a18bff'] },
-    Transport:     { title: 'The Uber Elite', blurb: 'Walking is for people who have time. You have a 4.92 rating.', grad: ['#5b8cff', '#7fdcd0'] },
-    Groceries:     { title: 'The Suspiciously Responsible', blurb: 'You buy vegetables on purpose. Your friends are concerned.', grad: ['#6fdba8', '#b5e48c'] },
-    Entertainment: { title: 'The Main Character', blurb: 'Concerts, games, vibes. Your bank account is the side quest.', grad: ['#b5e48c', '#5b8cff'] },
-    Subscriptions: { title: 'The Subscription Hoarder', blurb: 'Free trials don’t end, they evolve. You pay for apps you’ve never opened.', grad: ['#7fdcd0', '#a18bff'] },
-    Saver:         { title: 'The Frugal Final Boss', blurb: 'Under budget, no notes. Teach the rest of the group chat.', grad: ['#6fdba8', '#5b8cff'] },
-    Other:         { title: 'The Enigma', blurb: 'Your spending defies categories. Respect.', grad: ['#b8b8c8', '#a18bff'] },
+    Coffee:        { title: 'The Caffeinated Capitalist', blurb: 'Your blood type is oat milk. Baristas know your name AND your trauma.', grad: ['#ff7a1a', '#ffd23f'] },
+    Delivery:      { title: 'The DoorDash Dependent', blurb: 'Your kitchen is decorative. The delivery guy is your closest friend.', grad: ['#ff4fa3', '#ff7a1a'] },
+    Food:          { title: 'The Snack Strategist', blurb: 'Every meal is a "treat yourself" moment. Every. Single. One.', grad: ['#ffd23f', '#ff4fa3'] },
+    Shopping:      { title: 'The Add-to-Cart Assassin', blurb: 'Your Amazon driver has a key to your building. Probably.', grad: ['#8b5cf6', '#ff4fa3'] },
+    Beauty:        { title: 'The Glow-Up Investor', blurb: 'Skincare is self-care is a line item. Valid, but expensive.', grad: ['#ff8fc7', '#8b5cf6'] },
+    Transport:     { title: 'The Uber Elite', blurb: 'Walking is for people who have time. You have a 4.92 rating.', grad: ['#3d8bff', '#00d1d1'] },
+    Groceries:     { title: 'The Suspiciously Responsible', blurb: 'You buy vegetables on purpose. Your friends are concerned.', grad: ['#2ee59d', '#c6ff3d'] },
+    Entertainment: { title: 'The Main Character', blurb: 'Concerts, games, vibes. Your bank account is the side quest.', grad: ['#c6ff3d', '#3d8bff'] },
+    Subscriptions: { title: 'The Subscription Hoarder', blurb: 'Free trials don’t end, they evolve. You pay for apps you’ve never opened.', grad: ['#00d1d1', '#8b5cf6'] },
+    Saver:         { title: 'The Frugal Final Boss', blurb: 'Under budget, no notes. Teach the rest of the group chat.', grad: ['#2ee59d', '#3d8bff'] },
+    Other:         { title: 'The Enigma', blurb: 'Your spending defies categories. Respect.', grad: ['#b8b8c8', '#8b5cf6'] },
   };
   R.AURAS = AURAS;
 

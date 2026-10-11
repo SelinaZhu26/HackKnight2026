@@ -150,8 +150,8 @@
     const S = [];
 
     S.push({
-      bg: 'var(--lime)', fg: '#22182a', duration: 5000,
-      shapes: [['circle', 260, -8, 55, 'var(--pink)', 'enter'], ['star', 110, 84, -4, '#22182a', 'spin'], ['ring', 170, 80, 62, 'var(--purple)', 'enter']],
+      bg: 'var(--lime)', fg: '#0a0a0c', duration: 5000,
+      shapes: [['circle', 260, -8, 55, 'var(--pink)', 'enter'], ['star', 110, 84, -4, '#0a0a0c', 'spin'], ['ring', 170, 80, 62, 'var(--purple)', 'enter']],
       html: `<div class="eyebrow r">hey ${esc(nm)} 👋</div>
         <div class="mega r">your ${esc(a.monthLabel)} wrapped is here.</div>
         <div class="body r">your bank account has been keeping receipts. let’s unwrap them 🧾</div>`,
@@ -168,13 +168,13 @@
     if (a.prevTotal) {
       const max = Math.max(a.total, a.prevTotal);
       S.push({
-        bg: up ? 'var(--pink)' : 'var(--mint)', fg: '#22182a',
-        shapes: [['burst', 150, 8, 70, '#22182a', 'spin'], ['circle', 90, 84, -4, '#fff', 'enter']],
+        bg: up ? 'var(--pink)' : 'var(--mint)', fg: '#0a0a0c',
+        shapes: [['burst', 150, 8, 70, '#0a0a0c', 'spin'], ['circle', 90, 84, -4, '#fff', 'enter']],
         html: `<div class="eyebrow r">compared to ${esc(a.prevLabel)}…</div>
           <div class="mega r num">${up ? '+' : '−'}<span data-count="${Math.abs(Math.round(a.deltaPct * 100))}" data-suf="%">0%</span></div>
           <div class="vs-bars r">
-            <div class="col"><b>${money(a.prevTotal, 0)}</b><div data-h="${(a.prevTotal / max) * 100}%" style="background:rgba(34,24,42,.25)"></div><small>${esc(a.prevLabel)}</small></div>
-            <div class="col"><b>${money(a.total, 0)}</b><div data-h="${(a.total / max) * 100}%" style="background:#22182a"></div><small>${esc(a.monthLabel)}</small></div>
+            <div class="col"><b>${money(a.prevTotal, 0)}</b><div data-h="${(a.prevTotal / max) * 100}%" style="background:rgba(10,10,12,.25)"></div><small>${esc(a.prevLabel)}</small></div>
+            <div class="col"><b>${money(a.total, 0)}</b><div data-h="${(a.total / max) * 100}%" style="background:#0a0a0c"></div><small>${esc(a.monthLabel)}</small></div>
           </div>
           <div class="body r">${up ? 'you said you’d do better this month. you lied. 🙂' : 'growth. character development. we’re actually proud of you.'}</div>`,
       });
@@ -192,8 +192,8 @@
 
     const tm = a.byMerchant.slice(0, 5);
     if (tm.length) S.push({
-      bg: 'var(--orange)', fg: '#22182a', duration: 8000,
-      shapes: [['star', 140, 6, 68, 'var(--yellow)', 'spin'], ['circle', 220, 78, 50, '#22182a', 'enter']],
+      bg: 'var(--orange)', fg: '#0a0a0c', duration: 8000,
+      shapes: [['star', 140, 6, 68, 'var(--yellow)', 'spin'], ['circle', 220, 78, 50, '#0a0a0c', 'enter']],
       html: `<div class="eyebrow r">your top merchants</div>
         <div class="toplist r">${tm.map((m, i) => `<div class="it ${i === 0 ? 'first' : ''}"><span class="n">${i + 1}</span><span>${esc(m.name)}</span><small class="num">${money(m.amt, 0)}</small></div>`).join('')}</div>
         <div class="body r">on repeat: <b>${esc(a.mostVisited.name)}</b>, ${a.mostVisited.count} times. that’s your most-streamed song fr.</div>
@@ -224,7 +224,7 @@
 
     if (a.subs.length) {
       S.push({
-        bg: 'var(--teal)', fg: '#22182a', duration: 8000, shapes: [['ring', 200, -8, 64, '#22182a', 'enter']],
+        bg: 'var(--teal)', fg: '#0a0a0c', duration: 8000, shapes: [['ring', 200, -8, 64, '#0a0a0c', 'enter']],
         html: `<div class="eyebrow r">subscription check 🔁</div>
           <div class="big r">${money(a.subsTotal)}/mo on ${a.subs.length} subs</div>
           <div class="sub-list r">${a.subs.map((s) => `<div class="s ${s.ghost ? 'ghost' : ''}"><span>${esc(s.name)}${s.ghost ? '<span class="tag">👻 unused</span>' : ''}</span><span class="num">${money(s.amt)}</span></div>`).join('')}</div>
@@ -233,7 +233,7 @@
     }
 
     S.push({
-      bg: `linear-gradient(160deg, ${a.aura.grad[0]}, ${a.aura.grad[1]})`, fg: '#22182a', duration: 7500,
+      bg: `linear-gradient(160deg, ${a.aura.grad[0]}, ${a.aura.grad[1]})`, fg: '#0a0a0c', duration: 7500,
       html: `<div class="aura-orb" style="background:radial-gradient(circle at 30% 30%, #fff, ${a.aura.grad[0]} 45%, ${a.aura.grad[1]})">${R.CATEGORIES[a.aura.key]?.emoji || '🏆'}</div>
         <div class="eyebrow r" style="text-align:center">your money aura is</div>
         <div class="huge r" style="text-align:center">${esc(a.aura.title)}</div>
@@ -242,7 +242,7 @@
 
     const C = 2 * Math.PI * 88;
     S.push({
-      bg: '#22182a', duration: 7500, shapes: [['circle', 300, -10, 40, 'rgba(181,228,140,.08)', 'enter']],
+      bg: '#0a0a0c', duration: 7500, shapes: [['circle', 300, -10, 40, 'rgba(198,255,61,.08)', 'enter']],
       html: `<div class="eyebrow r">your financial health score</div>
         <div class="r" style="display:flex;justify-content:center;margin:22px 0">
           <div style="position:relative;width:220px;height:220px">
@@ -272,8 +272,8 @@
     });
 
     S.push({
-      bg: 'var(--yellow)', fg: '#22182a', hold: true,
-      shapes: [['circle', 200, 76, 56, 'var(--pink)', 'enter'], ['star', 90, 8, 76, '#22182a', 'spin']],
+      bg: 'var(--yellow)', fg: '#0a0a0c', hold: true,
+      shapes: [['circle', 200, 76, 56, 'var(--pink)', 'enter'], ['star', 90, 8, 76, '#0a0a0c', 'spin']],
       html: `<div class="eyebrow r">our prediction for ${esc(a.nextLabel)} 🔮</div>
         <div class="mega r num" data-count="${Math.round(a.prediction)}" data-pre="$">$0</div>
         <div class="body r">based on your last 3 months + your… momentum. we’re rarely wrong.</div>
@@ -297,7 +297,7 @@
     }
 
     S.push({
-      bg: '#22182a', hold: true,
+      bg: '#0a0a0c', hold: true,
       html: `<div class="eyebrow r" style="margin-bottom:14px">that’s a wrap 🎬</div>
         <div class="r">${R.summaryCard(R.summaryData(a, name))}</div>
         <div class="share-actions r">
@@ -343,7 +343,7 @@
     R.validateSummary(d);
     const aura = R.AURAS[d.au] || R.AURAS.Other;
     return `<div class="summary" style="background:linear-gradient(150deg, ${aura.grad[0]}, ${aura.grad[1]})">
-      ${shapes([['circle', 160, -20, 62, 'rgba(255,255,255,.35)'], ['star', 54, 4, 86, 'rgba(34,24,42,.85)', 'spin']])}
+      ${shapes([['circle', 160, -20, 62, 'rgba(255,255,255,.35)'], ['star', 54, 4, 86, 'rgba(10,10,12,.85)', 'spin']])}
       <div style="position:relative;font-weight:800;font-size:14px;opacity:.75">${esc(d.n === 'You' ? 'my' : d.n + '’s')} ${esc(d.m)} wrapped</div>
       <div class="aura-t">${esc(aura.title)}</div>
       <div class="sgrid">
@@ -369,9 +369,9 @@
     grad.addColorStop(0, aura.grad[0]); grad.addColorStop(1, aura.grad[1]);
     g.fillStyle = grad; g.fillRect(0, 0, W, H);
     g.fillStyle = 'rgba(255,255,255,.3)'; g.beginPath(); g.arc(880, 260, 330, 0, Math.PI * 2); g.fill();
-    g.fillStyle = '#22182a'; g.beginPath(); g.arc(120, 1700, 200, 0, Math.PI * 2); g.fill();
-    const F = (w, s) => `${w} ${s}px "Fredoka", system-ui, sans-serif`;
-    g.fillStyle = '#22182a';
+    g.fillStyle = '#0a0a0c'; g.beginPath(); g.arc(120, 1700, 200, 0, Math.PI * 2); g.fill();
+    const F = (w, s) => `${w} ${s}px "Bricolage Grotesque", system-ui, sans-serif`;
+    g.fillStyle = '#0a0a0c';
     g.font = F(800, 64); g.fillText('mochii club', 90, 160);
     g.font = F(700, 52); g.globalAlpha = 0.75; g.fillText(`${d.n === 'You' ? 'my' : d.n + '’s'} ${d.m} wrapped`, 90, 380); g.globalAlpha = 1;
     // wrap aura title
@@ -407,8 +407,8 @@
     const disp = (p) => (p.person.id === 'me' ? name : p.person.name);
     const S = [];
     S.push({
-      bg: 'var(--pink)', fg: '#22182a', duration: 5000,
-      shapes: [['circle', 240, -10, 54, 'var(--lime)', 'enter'], ['burst', 140, 70, 0, '#22182a', 'spin']],
+      bg: 'var(--pink)', fg: '#0a0a0c', duration: 5000,
+      shapes: [['circle', 240, -10, 54, 'var(--lime)', 'enter'], ['burst', 140, 70, 0, '#0a0a0c', 'spin']],
       html: `<div class="eyebrow r">the group chat’s</div><div class="mega r">${esc(label)} wrapped 👯</div>
         <div class="body r">${people.length} friends. 1 shared delusion that “it’s fine.”</div>`,
     });
@@ -419,10 +419,10 @@
         <div class="body r">that’s ${R.equiv(total)}. as a group. in one month.</div>`,
     });
     sup.forEach((s, i) => {
-      const fg = ['var(--purple)', 'var(--blue)'].includes(pal[i % pal.length]) ? '#fff' : '#22182a';
+      const fg = ['var(--purple)', 'var(--blue)'].includes(pal[i % pal.length]) ? '#fff' : '#0a0a0c';
       S.push({
         bg: pal[i % pal.length], fg, duration: 5500,
-        shapes: [['circle', 180, 75, 60, 'rgba(255,255,255,.35)', 'enter'], ['star', 80, 8, 78, fg === '#fff' ? '#fff' : '#22182a', 'spin']],
+        shapes: [['circle', 180, 75, 60, 'rgba(255,255,255,.35)', 'enter'], ['star', 80, 8, 78, fg === '#fff' ? '#fff' : '#0a0a0c', 'spin']],
         html: `<div class="superl-slide"><div class="eyebrow r">${s.emoji} superlative ${i + 1}/${sup.length}</div>
           <div class="big r">${esc(s.title)}</div>
           <div class="who-big r pop"><div class="avatar" style="background:${s.who.person.color}">${s.who.person.emoji}</div><b>${esc(disp(s.who))}</b></div>
@@ -431,17 +431,17 @@
     });
     const ranked = [...people].sort((x, y) => y.a.score.score - x.a.score.score);
     S.push({
-      bg: '#22182a', duration: 8000,
+      bg: '#0a0a0c', duration: 8000,
       html: `<div class="eyebrow r">health score leaderboard 🏆</div>
         <div class="big r">who’s actually got it together</div>
         <div class="rank-list r">${ranked.map((f, i) => `<div class="rr ${f.person.id === 'me' ? 'me' : ''}"><span>${['🥇', '🥈', '🥉'][i] || i + 1}</span><span>${f.person.emoji}</span><span>${esc(disp(f))}</span><span class="num">${f.a.score.score} · ${f.a.score.grade}</span></div>`).join('')}</div>`,
     });
     S.push({
-      bg: 'var(--lime)', fg: '#22182a', hold: true,
+      bg: 'var(--lime)', fg: '#0a0a0c', hold: true,
       shapes: [['circle', 200, 80, 60, 'var(--pink)', 'enter']],
       html: `<div class="eyebrow r">next month’s side quest</div>
         <div class="huge r">start a squad. bet on each other. loser buys boba. 🧋</div>
-        <div class="share-actions r"><button class="btn dark" data-act="squad">start a squad</button><button class="btn ghost" data-act="link" style="background:rgba(34,24,42,.1);color:#22182a">🔗 share</button></div>`,
+        <div class="share-actions r"><button class="btn dark" data-act="squad">start a squad</button><button class="btn ghost" data-act="link" style="background:rgba(10,10,12,.1);color:#0a0a0c">🔗 share</button></div>`,
       onEnter: (el, story) => {
         $('[data-act=squad]', el).onclick = (e) => { e.stopPropagation(); story.close(); location.hash = '#/squads'; };
         $('[data-act=link]', el).onclick = (e) => { e.stopPropagation(); onShare('friends'); };

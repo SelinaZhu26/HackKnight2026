@@ -14,7 +14,7 @@
   const U = (n, title, emoji, color, lessons) => ({ n, title, emoji, color, lessons });
 
   R.CURRICULUM = [
-    U(1, 'Money and Your Choices', '💸', '#b5e48c', [
+    U(1, 'Money and Your Choices', '💸', '#c6ff3d', [
       L('1.1', 'Where money goes', 'Money moves four ways. **Income** comes in (pay, gifts). **Spending** goes out on stuff. **Savings** is money you park for later. **Borrowing** gets you money now that you must pay back, and that obligation is **debt**. Mia earns $80 babysitting, spends $25 on snacks, saves $30, and borrows $5 from her brother.', [
         match('Match each money move', [['Income', 'money coming in'], ['Spending', 'money going out on stuff'], ['Savings', 'money set aside for later'], ['Debt', 'money you owe back']]),
         blank('You borrow $10 from a friend. That $10 is ___ because you have to ___ it.', ['debt', 'repay'], ['debt', 'income', 'repay', 'spend', 'savings']),
@@ -59,7 +59,7 @@
       ]),
     ]),
 
-    U(2, 'Spending With a Plan', '📊', '#ff8fb8', [
+    U(2, 'Spending With a Plan', '📊', '#ff4fa3', [
       L('2.1', 'Tracking spending', 'Small repeated purchases add up. A $4 snack, 3 days a week, for 4 weeks = **$48**. Tracking shows you the total so you can choose on purpose instead of by habit.', [
         num('A $3 snack, 4 days a week, for 4 weeks costs how much?', 48),
         blank('Tracking reveals the ___ cost of purchases that feel tiny one at a time.', ['total'], ['total', 'fake', 'zero', 'secret']),
@@ -104,7 +104,7 @@
       ]),
     ]),
 
-    U(3, 'Banking and Digital Money', '🏦', '#a18bff', [
+    U(3, 'Banking and Digital Money', '🏦', '#8b5cf6', [
       L('3.1', 'Choosing a money tool', 'A **checking account** (with a debit card) is for everyday spending. A **savings account** keeps goal money separate and may earn interest. **Payment apps** send money to people. Check what protections apply: bank deposits can be insured, but an app balance might not be.', [
         match('Match the tool to its main job', [['Checking account', 'everyday spending'], ['Savings account', 'money for goals'], ['Payment app', 'sending money to people']]),
         mc('Why keep goal money in a separate account?', ['So it’s harder to spend by accident', 'Checking accounts can’t hold much', 'It doubles automatically'], 0),
@@ -151,7 +151,7 @@
       ]),
     ]),
 
-    U(4, 'Your First Paycheck', '💼', '#ffa173', [
+    U(4, 'Your First Paycheck', '💼', '#ff7a1a', [
       L('4.1', 'Calculating earnings', '**Gross pay** = hours × hourly rate. 10 hours at $14 = $140 gross. But that’s not what lands in your account, and it doesn’t land instantly: deductions come out and payday has a schedule.', [
         num('8 hours at $16/hour. Gross pay?', 128),
         mc('Is gross pay what lands in your account?', ['Yes, always', 'No. Taxes and deductions usually come out first.'], 1),
@@ -198,7 +198,7 @@
       ]),
     ]),
 
-    U(5, 'Saving and Money Over Time', '🌱', '#7fdcd0', [
+    U(5, 'Saving and Money Over Time', '🌱', '#00d1d1', [
       L('5.1', 'Emergency vs. planned savings', 'An **emergency fund** covers unexpected essentials. **Planned savings** are for known goals. Keeping them separate means a surprise doesn’t quietly eat your trip money, and you always know what’s left.', [
         match('Which bucket pays?', [['Emergency fund', 'surprise car repair'], ['Planned savings', 'concert in March'], ['Spending money', 'this week’s lunches']]),
         mc('Your bike chain snaps and you need the bike to get to work. Which bucket?', ['Emergency fund', 'Vacation fund'], 0),
@@ -243,7 +243,7 @@
       ]),
     ]),
 
-    U(6, 'Credit Without the Confusion', '💳', '#ffd97a', [
+    U(6, 'Credit Without the Confusion', '💳', '#ffd23f', [
       L('6.1', 'Credit is borrowing', 'A **credit limit** is the most you can borrow, not money you have. Spend $200 on a $500-limit card and you **owe** $200.', [
         mc('$500 limit, you spend $200. You now…', ['Owe $200', 'Have $300 more income', 'Earned $200'], 0),
         blank('A credit limit is borrowing ___, not ___.', ['capacity', 'income'], ['capacity', 'income', 'savings', 'rewards']),
@@ -286,7 +286,7 @@
       ]),
     ]),
 
-    U(7, 'Borrowing and Getting Out of Debt', '⛓️', '#6fdba8', [
+    U(7, 'Borrowing and Getting Out of Debt', '⛓️', '#2ee59d', [
       L('7.1', 'Loan comparisons', 'Total cost = payment × number of payments (plus fees). A lower monthly payment over a longer time can cost **more** overall.', [
         num('18 payments of $50. Total paid?', 900),
         mc('A lower monthly payment usually means…', ['Always cheaper overall', 'It can cost more in total over a longer time'], 1),
@@ -331,7 +331,7 @@
       ]),
     ]),
 
-    U(8, 'Paying for Your Next Life Stage', '🎓', '#5b8cff', [
+    U(8, 'Paying for Your Next Life Stage', '🎓', '#3d8bff', [
       L('8.1', 'Education choices', 'Price isn’t the whole story. Check **completion rates**, credible **job outcomes**, **accreditation**, total cost and financing, and personal fit. “High-paying careers” in an ad isn’t a guarantee.', [
         mc('A program advertises “90% job placement.” What should you check?', ['How it’s measured and who’s counted', 'Nothing, trust it'], 0),
         blank('An advertised salary is a ___, not a guarantee.', ['claim'], ['claim', 'promise', 'contract']),
@@ -376,7 +376,7 @@
       ]),
     ]),
 
-    U(9, 'Protecting Yourself From Shocks', '☂️', '#ff8fb8', [
+    U(9, 'Protecting Yourself From Shocks', '☂️', '#ff4fa3', [
       L('9.1', 'Understanding risk', 'Risk has two parts: how **likely** something is, and how **costly** it would be. A rare event can still deserve a plan if it would be a loss you couldn’t absorb.', [
         blank('Risk combines how ___ something is and how ___ it would be.', ['likely', 'costly'], ['likely', 'costly', 'cute', 'old']),
         mc('Which risk most needs a plan?', ['A rare event that could cost $20,000', 'A frequent $2 annoyance'], 0),
@@ -423,7 +423,7 @@
       ]),
     ]),
 
-    U(10, 'Investing Foundations', '📈', '#b5e48c', [
+    U(10, 'Investing Foundations', '📈', '#c6ff3d', [
       L('10.1', 'Saving vs. investing', 'Match the tool to the deadline. Money needed **soon** should be accessible and safe. Money for **years** away can ride out ups and downs. Volatile investments can drop right when you need the cash.', [
         mc('Money for rent next month belongs…', ['In an accessible savings or checking account', 'In a volatile stock'], 0),
         blank('The ___ until you need the money affects how much risk fits.', ['time'], ['time', 'weather', 'logo']),
@@ -470,7 +470,7 @@
       ]),
     ]),
 
-    U(11, 'Investing Judgment', '🧠', '#a18bff', [
+    U(11, 'Investing Judgment', '🧠', '#8b5cf6', [
       L('11.1', 'Accounts vs. investments', 'An **account** (IRA, 401(k), brokerage) is a container. **Investments** are what you put inside. Money deposited can sit as cash until you choose investments.', [
         mc('You deposited into a retirement account but never picked investments. Your money may be…', ['Sitting as cash', 'Automatically in stocks'], 0),
         blank('An account is the ___; investments are what’s ___ it.', ['container', 'inside'], ['container', 'inside', 'logo', 'outside']),
@@ -519,7 +519,7 @@
       ]),
     ]),
 
-    U(12, 'Build Your Financial Plan', '🗺️', '#ffa173', [
+    U(12, 'Build Your Financial Plan', '🗺️', '#ff7a1a', [
       L('12.1', 'Net worth and cash flow', '**Net worth** = assets − debts: a snapshot. **Cash flow** = money in − money out each month: a movie. You can have positive net worth and still be bleeding cash monthly.', [
         num('Assets $2,000, debts $500. Net worth?', 1500),
         blank('Net worth = assets − ___. Cash flow = money in − money ___.', ['debts', 'out'], ['debts', 'out', 'income', 'in']),

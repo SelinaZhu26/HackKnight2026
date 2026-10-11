@@ -190,7 +190,7 @@ Mix types. Return JSON {"exercises":[...]} where each item is ONE of:
   }
   function confetti(box) {
     if (reduceMotion()) return;
-    const cols = ['#b5e48c', '#ff8fb8', '#a18bff', '#ffd97a', '#7fdcd0', '#ffa173', '#6fdba8'];
+    const cols = ['#c6ff3d', '#ff4fa3', '#8b5cf6', '#ffd23f', '#00d1d1', '#ff7a1a', '#2ee59d'];
     const wrap = document.createElement('div'); wrap.className = 'confetti';
     wrap.innerHTML = Array.from({ length: 70 }, () => `<i style="left:${Math.random() * 100}%;background:${pick(cols)};animation-delay:${Math.random() * 0.5}s;animation-duration:${1.8 + Math.random() * 1.6}s;--r:${Math.random() * 720 - 360}deg;--dx:${Math.random() * 120 - 60}px;${Math.random() > 0.5 ? 'border-radius:50%;' : ''}"></i>`).join('');
     box.appendChild(wrap); setTimeout(() => wrap.remove(), 4200);
@@ -277,8 +277,8 @@ Mix types. Return JSON {"exercises":[...]} where each item is ONE of:
     const idx0 = R.LESSONS.findIndex((l) => l.id === u.lessons[0].id);
     const doneN = u.lessons.filter((l) => L.done[l.id]).length;
     const locked = idx0 > cur;
-    const dark = ['#b5e48c', '#ffd97a', '#6fdba8', '#7fdcd0', '#ffa173', '#ff8fb8'].includes(u.color);
-    return `<section class="unit ${locked ? 'locked' : ''}" style="--u:${u.color};--uink:${dark ? '#22182a' : '#fff'}">
+    const dark = ['#c6ff3d', '#ffd23f', '#2ee59d', '#00d1d1', '#ff7a1a', '#ff4fa3'].includes(u.color);
+    return `<section class="unit ${locked ? 'locked' : ''}" style="--u:${u.color};--uink:${dark ? '#0a0a0c' : '#fff'}">
       <div class="unit-banner">
         <div class="grow"><small>unit ${u.n} · ${doneN}/${u.lessons.length}</small><h3>${esc(u.title)}</h3></div>
         ${locked ? `<button class="jump" data-l="jump" data-u="${u.n}">jump here?</button>` : ''}

@@ -12,7 +12,7 @@
 .fx-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
 .fx-pill { flex-shrink: 0; margin-top: 10px; padding: 9px 14px; border-radius: 999px; background: var(--surface-2); font-weight: 800; font-size: 13px; transition: transform 0.15s; }
 .fx-pill:active { transform: scale(0.95); }
-.fx-pill.on { background: var(--accent); color: #22182a; }
+.fx-pill.on { background: var(--accent); color: #0a0a0c; }
 .fx-fine { text-align: center; color: var(--muted); font-size: 12px; margin: 22px 0 4px; }
 
 /* widget shells */
@@ -75,8 +75,8 @@
 .fc-big { font-size: 52px; font-weight: 800; letter-spacing: -0.05em; line-height: 1; margin: 4px 0 6px; }
 .fc-sub { font-size: 13px; color: var(--muted); line-height: 1.4; }
 .chg { display: inline-block; font-weight: 800; padding: 2px 8px; border-radius: 999px; margin-right: 6px; background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); }
-.chg.up { background: rgba(111, 219, 168, 0.15); color: var(--mint); }
-.chg.down { background: rgba(255, 143, 184, 0.15); color: var(--pink); }
+.chg.up { background: rgba(46, 229, 157, 0.15); color: var(--mint); }
+.chg.down { background: rgba(255, 79, 163, 0.15); color: var(--pink); }
 .chart-wrap { position: relative; margin: 14px -6px 4px; }
 .fc-chart { width: 100%; display: block; overflow: visible; touch-action: pan-y; }
 .fc-chart .grid { stroke: var(--line); stroke-width: 1; }
@@ -94,7 +94,7 @@
 @keyframes pulse { 0% { transform: scale(0.6); opacity: 0.6; } 100% { transform: scale(2); opacity: 0; } }
 .fc-chart .scrub { stroke: #fff; stroke-width: 1; opacity: 0.6; }
 .fc-chart .scrub-dot { fill: #fff; stroke: var(--accent); stroke-width: 2; }
-.chart-tip { position: absolute; top: -6px; padding: 7px 10px; border-radius: 12px; background: #fff; color: #22182a; font-size: 12px; line-height: 1.35; pointer-events: none; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35); white-space: nowrap; }
+.chart-tip { position: absolute; top: -6px; padding: 7px 10px; border-radius: 12px; background: #fff; color: #0a0a0c; font-size: 12px; line-height: 1.35; pointer-events: none; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35); white-space: nowrap; }
 .chart-tip i { font-style: normal; font-size: 10px; font-weight: 800; background: var(--accent); padding: 1px 6px; border-radius: 999px; margin-left: 4px; }
 .chart-tip small { color: #6b6b78; }
 
@@ -106,7 +106,7 @@
 .hz-ticks { display: flex; justify-content: space-between; margin-top: 8px; }
 .hz-ticks button { font-size: 11px; font-weight: 700; color: var(--muted); padding: 4px 2px; min-width: 30px; border-radius: 8px; opacity: 0.7; }
 .hz-ticks button.flag { opacity: 1; color: var(--text); }
-.hz-ticks button.on { background: var(--accent); color: #22182a; opacity: 1; }
+.hz-ticks button.on { background: var(--accent); color: #0a0a0c; opacity: 1; }
 
 .drivers { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 12px; }
 .drv-h { font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
@@ -114,18 +114,18 @@
 .drv b { font-size: 14px; display: block; } .drv small { color: var(--muted); font-size: 12px; }
 
 /* 🚨 runway */
-.rw { border-radius: 22px; padding: 18px; color: #22182a; position: relative; overflow: hidden; }
+.rw { border-radius: 22px; padding: 18px; color: #0a0a0c; position: relative; overflow: hidden; }
 .rw.alarm { background: var(--pink); animation: alarm-glow 2.4s ease-in-out infinite; }
 .rw.warn { background: var(--yellow); }
 .rw.good { background: var(--mint); }
-@keyframes alarm-glow { 50% { box-shadow: 0 0 0 6px rgba(255, 143, 184, 0.25); } }
+@keyframes alarm-glow { 50% { box-shadow: 0 0 0 6px rgba(255, 79, 163, 0.25); } }
 .rw-k { font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
 .rw.alarm .rw-k { animation: blink 1.2s steps(2) infinite; }
 .rw h3 { font-size: 27px; font-weight: 800; letter-spacing: -0.035em; line-height: 1.02; margin: 8px 0 10px; text-wrap: balance; }
 .rw h3 u { text-decoration-thickness: 4px; text-underline-offset: 4px; }
 .rw p { font-size: 14px; font-weight: 500; line-height: 1.4; }
-.rw-meter { position: relative; height: 12px; border-radius: 6px; background: rgba(34, 24, 42, 0.18); margin: 14px 0 18px; }
-.rw-meter i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; background: #22182a; animation: drain 2s cubic-bezier(0.2, 0.8, 0.2, 1) both; transform-origin: left; }
+.rw-meter { position: relative; height: 12px; border-radius: 6px; background: rgba(10, 10, 12, 0.18); margin: 14px 0 18px; }
+.rw-meter i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; background: #0a0a0c; animation: drain 2s cubic-bezier(0.2, 0.8, 0.2, 1) both; transform-origin: left; }
 @keyframes drain { from { transform: scaleX(0); } }
 .rw-meter span { position: absolute; top: 16px; font-size: 11px; font-weight: 800; } .rw-meter span:last-child { right: 0; }
 .rw-q { margin-top: 12px; background: var(--surface-2); border-radius: 18px; padding: 12px 14px; font-size: 13px; }
@@ -219,7 +219,7 @@
 .ov-body::-webkit-scrollbar { display: none; }
 .cat-months { display: flex; gap: 6px; overflow-x: auto; margin: 4px 0 10px; scrollbar-width: none; }
 .cat-months button { padding: 8px 14px; border-radius: 999px; background: var(--surface-2); font-weight: 800; font-size: 13px; white-space: nowrap; }
-.cat-months button.on { background: var(--accent); color: #22182a; }
+.cat-months button.on { background: var(--accent); color: #0a0a0c; }
 .cat-grid-r { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .mini-r { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; padding: 14px 14px 16px; background: #fbfaf3; color: #16161b; font-family: 'Space Mono', ui-monospace, monospace; border-radius: 6px 6px 0 0;
   -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / 10px 51% repeat-x, linear-gradient(#000, #000) top / 100% 50% no-repeat;
@@ -261,7 +261,7 @@
 
 /* Home teaser */
 .fx-home { display: flex; align-items: center; gap: 14px; margin: 12px 0; padding: 14px 16px; border-radius: 22px; background: var(--surface); border: 1px solid var(--line); text-decoration: none; color: var(--text); }
-.fx-home.alarm { background: color-mix(in srgb, var(--pink) 16%, var(--surface)); border-color: rgba(255, 143, 184, 0.4); }
+.fx-home.alarm { background: color-mix(in srgb, var(--pink) 16%, var(--surface)); border-color: rgba(255, 79, 163, 0.4); }
 .fx-home .em { font-size: 26px; } .fx-home b { display: block; font-size: 15px; } .fx-home small { color: var(--muted); font-size: 12px; }
 .fx-home .arrow { font-size: 22px; font-weight: 800; color: var(--lime); }
 
