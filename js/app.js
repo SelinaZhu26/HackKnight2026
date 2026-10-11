@@ -564,6 +564,14 @@
       </div>`;
   }
 
+  // tap-to-roast for the mochi buddy (js/whimsy.js): one recent purchase, one line
+  window.mochiiRoast = async () => {
+    const pool = recentTxns();
+    const t = pool[Math.floor(Math.random() * pool.length)];
+    if (!t) return { line: R.fallbackRoast(A.me, displayName()) };
+    const line = await R.ai.roastPurchase(t, displayName() === 'You' ? 'this person' : displayName());
+    return { head: `${t.merchant} · ${money(t.amount)}`, line };
+  };
   const recentTxns = () => {
     const all = myTxns().filter((t) => !t.recurring);
     return all.sort((x, y) => y.date.localeCompare(x.date)).slice(0, 10);
