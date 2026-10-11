@@ -1,4 +1,4 @@
-/* receipts. — app shell, screens and state */
+/* mochii — app shell, screens and state */
 (function () {
   const { esc, money } = R;
   const $ = (s, el = document) => el.querySelector(s);
@@ -7,13 +7,13 @@
 
   // ---------- state ----------
   const DEFAULT_SQUADS = [
-    { id: 'nodash', name: 'No-DoorDash November', emoji: '🛵', color: '#ff4fa3', cat: 'Delivery', limit: 100, stakes: 'loser buys the group boba 🧋', members: ['me', 'marcus', 'maya'], code: 'DASH26', streak: 3 },
-    { id: 'beans', name: 'Coffee Cutters', emoji: '☕', color: '#ff7a1a', cat: 'Coffee', limit: 60, stakes: 'loser brews everyone cold brew for a week', members: ['me', 'priya', 'dev', 'jordan'], code: 'BEAN42', streak: 1 },
-    { id: 'tour', name: 'Broke but Booked', emoji: '🎤', color: '#c6ff3d', cat: 'Entertainment', limit: 150, stakes: 'winner picks the next concert', members: ['jordan', 'me', 'priya'], code: 'TOUR88', streak: 5 },
+    { id: 'nodash', name: 'No-DoorDash November', emoji: '🛵', color: '#ff8fb8', cat: 'Delivery', limit: 100, stakes: 'loser buys the group boba 🧋', members: ['me', 'marcus', 'maya'], code: 'DASH26', streak: 3 },
+    { id: 'beans', name: 'Coffee Cutters', emoji: '☕', color: '#ffa173', cat: 'Coffee', limit: 60, stakes: 'loser brews everyone cold brew for a week', members: ['me', 'priya', 'dev', 'jordan'], code: 'BEAN42', streak: 1 },
+    { id: 'tour', name: 'Broke but Booked', emoji: '🎤', color: '#b5e48c', cat: 'Entertainment', limit: 150, stakes: 'winner picks the next concert', members: ['jordan', 'me', 'priya'], code: 'TOUR88', streak: 5 },
   ];
   const PUBLIC_SQUADS = {
-    GYMRAT: { name: 'Gym Rats Who Actually Go', emoji: '🏋️', color: '#2ee59d', cat: 'Subscriptions', limit: 30, stakes: 'cancel one sub or do 50 pushups', members: ['dev', 'maya'] },
-    UBER0: { name: 'Legs Exist', emoji: '🚶', color: '#3d8bff', cat: 'Transport', limit: 80, stakes: 'loser walks everyone to class', members: ['jordan', 'marcus'] },
+    GYMRAT: { name: 'Gym Rats Who Actually Go', emoji: '🏋️', color: '#6fdba8', cat: 'Subscriptions', limit: 30, stakes: 'cancel one sub or do 50 pushups', members: ['dev', 'maya'] },
+    UBER0: { name: 'Legs Exist', emoji: '🚶', color: '#5b8cff', cat: 'Transport', limit: 80, stakes: 'loser walks everyone to class', members: ['jordan', 'marcus'] },
   };
 
   let S = load();
@@ -69,7 +69,7 @@
     });
   }
   const avatar = (p, cls = '') => `<div class="avatar ${cls}" style="background:${p.color}">${p.emoji}</div>`;
-  const gradeColor = (g) => ({ A: '#2ee59d', B: '#c6ff3d', C: '#ffd23f', D: '#ff7a1a', F: '#ff4545' }[g]);
+  const gradeColor = (g) => ({ A: '#6fdba8', B: '#b5e48c', C: '#ffd97a', D: '#ffa173', F: '#ff6b81' }[g]);
   const b64 = { enc: (o) => btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
     dec: (s) => JSON.parse(decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))))) };
   const baseUrl = () => location.href.split('#')[0];
@@ -107,11 +107,11 @@
   function renderWelcome(step = S.name.trim() && S.welcomeStep === 2 ? 2 : 1) {
     const dots = `<div class="ob-dots" aria-label="step ${step} of 2">${[1, 2].map((i) => `<i class="${i <= step ? 'on' : ''}"></i>`).join('')}</div>`;
     const shapes = `<div class="shape circle" style="width:300px;height:300px;top:-60px;right:-90px;background:var(--pink);animation:float 7s ease-in-out infinite alternate"></div>
-      <div class="shape star" style="width:64px;height:64px;top:26px;right:170px;background:#0a0a0c;animation:spin 20s linear infinite"></div>
+      <div class="shape star" style="width:64px;height:64px;top:26px;right:170px;background:#22182a;animation:spin 20s linear infinite"></div>
       <div class="shape ring" style="width:110px;height:110px;top:70px;right:24px;border-width:14px;border-color:var(--purple);animation:float 6s ease-in-out infinite alternate-reverse"></div>`;
     if (step === 1) {
       phone.innerHTML = `<div class="welcome">${shapes}
-        <div class="ob-top"><div class="logo">receipts<i>.</i></div>${dots}</div>
+        <div class="ob-top"><div class="logo"><span class="mochi" aria-hidden="true"></span>mochi<b>i</b></div>${dots}</div>
         <h1>your money had a month. let’s talk about it.</h1>
         <p class="lead">spotify wrapped for your bank statement, plus friends who keep you accountable.</p>
         <form class="ob-name" id="obName">
@@ -129,7 +129,7 @@
     }
     let pick = S.welcomeSource || 'demo';
     phone.innerHTML = `<div class="welcome step2">
-      <div class="ob-top"><button class="ob-back" id="obBack" aria-label="back">←</button><div class="logo">receipts<i>.</i></div>${dots}</div>
+      <div class="ob-top"><button class="ob-back" id="obBack" aria-label="back">←</button><div class="logo"><span class="mochi" aria-hidden="true"></span>mochi<b>i</b></div>${dots}</div>
       <h2 class="ob-h">nice to meet you, ${esc(displayName())} 👋</h2>
       <p class="lead">where should we pull your receipts from?</p>
       <div class="ob-sources" role="radiogroup">${SOURCES.map((o) => `
@@ -406,7 +406,7 @@
   function renderShell(page) {
     if (!TABS.some((t) => t[0] === page)) page = 'home';
     phone.innerHTML = `
-      <div class="topbar"><div class="logo">receipts<i>.</i></div>
+      <div class="topbar"><div class="logo"><span class="mochi" aria-hidden="true"></span>mochi<b>i</b></div>
         <div class="row" style="gap:8px"><button class="icon-btn" data-act="gmail" title="import receipts">📧</button><button class="icon-btn" data-act="settings" title="settings">⚙️</button></div></div>
       <main class="screen" id="screen"></main>
       <nav class="tabbar">${TABS.map(([id, ic, lb]) => `<a class="tab ${id === page ? 'on' : ''}" href="#/${id}"><span>${ic}</span>${lb}</a>`).join('')}</nav>`;
@@ -521,7 +521,7 @@
       const k = amt ? 0.14 + 0.86 * Math.pow(amt / max, 0.7) : 0;
       const isToday = localKey(today) === cal.month && today.getDate() === d;
       cells.push(`<button class="cal-d ${d === cal.day ? 'sel' : ''} ${isToday ? 'today' : ''} ${k > 0.55 ? 'hot' : ''}" data-act="calDay" data-d="${d}"
-        style="${amt ? `background:rgba(198,255,61,${k.toFixed(2)})` : ''}" aria-label="${R.monthLabel(cal.month)} ${d}: ${money(amt)}">
+        style="${amt ? `background:rgba(181,228,140,${k.toFixed(2)})` : ''}" aria-label="${R.monthLabel(cal.month)} ${d}: ${money(amt)}">
         <b>${d}</b><small>${amt ? (amt >= 100 ? '$' + Math.round(amt) : money(amt, 0)) : '·'}</small></button>`);
     }
     const sel = days[cal.day];
@@ -533,7 +533,7 @@
         <button class="icon-btn sm" data-act="calNav" data-dir="1" ${mi >= months.length - 1 ? 'disabled' : ''} aria-label="next month"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
       </div>
       <div class="cal-grid">${['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((w) => `<span class="cal-w">${w}</span>`).join('')}${cells.join('')}</div>
-      <div class="cal-legend"><span>less</span>${[0.14, 0.4, 0.7, 1].map((a) => `<i style="background:rgba(198,255,61,${a})"></i>`).join('')}<span>more</span></div>
+      <div class="cal-legend"><span>less</span>${[0.14, 0.4, 0.7, 1].map((a) => `<i style="background:rgba(181,228,140,${a})"></i>`).join('')}<span>more</span></div>
       <div class="cal-detail">
         <div class="row" style="justify-content:space-between;margin-bottom:4px">
           <b>${selDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</b>
@@ -563,15 +563,15 @@
   // ---------- FRIENDS ----------
   function renderFriends(el) {
     const sup = R.superlatives(PEOPLE);
-    const pal = ['#ff4fa3', '#c6ff3d', '#ff7a1a', '#8b5cf6', '#00d1d1', '#ffd23f', '#3d8bff', '#2ee59d'];
+    const pal = ['#ff8fb8', '#b5e48c', '#ffa173', '#a18bff', '#7fdcd0', '#ffd97a', '#5b8cff', '#6fdba8'];
     const ranked = [...PEOPLE].sort((x, y) => y.a.score.score - x.a.score.score);
     el.innerHTML = `
       <h1 class="title">friends</h1>
       <div class="hero friends" data-act="playFriends" style="min-height:200px">
         <div class="shape circle" style="width:180px;height:180px;top:-40px;right:-30px;background:var(--lime);animation:float 6s ease-in-out infinite alternate"></div>
-        <div class="shape burst" style="width:64px;height:64px;bottom:24px;right:28px;background:#0a0a0c;animation:spin 14s linear infinite"></div>
-        <div class="kicker" style="color:#0a0a0c">${PEOPLE.length} friends · ${esc(A.me.monthLabel)}</div>
-        <h2 style="color:#0a0a0c">friends wrapped</h2>
+        <div class="shape burst" style="width:64px;height:64px;bottom:24px;right:28px;background:#22182a;animation:spin 14s linear infinite"></div>
+        <div class="kicker" style="color:#22182a">${PEOPLE.length} friends · ${esc(A.me.monthLabel)}</div>
+        <h2 style="color:#22182a">friends wrapped</h2>
         <span class="btn dark play">▶ play</span>
       </div>
       <div class="section-h"><h3>most likely to…</h3><small>swipe →</small></div>
@@ -591,7 +591,7 @@
     const f = personById(id); const a = f.a; const p = f.person;
     sheet(`<div style="text-align:center">${avatar(p, 'lg')}
         <h3 style="margin-top:10px">${esc(id === 'me' ? displayName() : p.name)}</h3><div class="muted">${esc(p.handle)}</div>
-        <div class="pill" style="margin-top:10px;background:linear-gradient(90deg,${a.aura.grad[0]},${a.aura.grad[1]});color:#0a0a0c">${esc(a.aura.title)}</div></div>
+        <div class="pill" style="margin-top:10px;background:linear-gradient(90deg,${a.aura.grad[0]},${a.aura.grad[1]});color:#22182a">${esc(a.aura.title)}</div></div>
       <div class="row" style="margin:18px 0;gap:8px">
         <div class="card grow" style="padding:12px;text-align:center"><div class="muted" style="font-size:12px">spent</div><b class="num">${money(a.total, 0)}</b></div>
         <div class="card grow" style="padding:12px;text-align:center;margin:0"><div class="muted" style="font-size:12px">vs last mo</div><b class="delta ${a.deltaPct > 0 ? 'up' : 'down'}" style="font-size:16px">${a.deltaPct > 0 ? '+' : ''}${Math.round(a.deltaPct * 100)}%</b></div>
@@ -634,7 +634,7 @@
         return `<div class="card squad" style="margin-top:12px">
           <div class="head"><div class="em" style="background:${sq.color}22">${sq.emoji}</div>
             <div class="grow"><h4>${esc(sq.name)}</h4><div class="muted" style="font-size:13px">${R.CATEGORIES[sq.cat].emoji} ${esc(sq.cat)} ≤ ${money(sq.limit, 0)}/mo · 🔥 ${sq.streak || 0} wk streak</div></div>
-            <div class="pill" style="background:${okN === st.length ? 'var(--mint)' : 'var(--surface-2)'};color:${okN === st.length ? '#0a0a0c' : 'inherit'}">${okN}/${st.length} on track</div></div>
+            <div class="pill" style="background:${okN === st.length ? 'var(--mint)' : 'var(--surface-2)'};color:${okN === st.length ? '#22182a' : 'inherit'}">${okN}/${st.length} on track</div></div>
           ${st.map((m) => {
             const p = personById(m.id).person;
             return `<div class="member">${avatar(p, 'sm')}<div style="width:58px;font-weight:700">${esc(m.id === 'me' ? 'you' : p.name)}</div>
@@ -659,7 +659,7 @@
         if (!$('#sqLimit', sh).value.trim() || !Number.isFinite(limit) || limit < 0) return toast('enter a monthly cap of zero or more');
         const name = $('#sqName', sh).value.trim() || 'Unnamed Squad';
         const members = ['me', ...[...sh.querySelectorAll('.friend-pick input:checked')].map((i) => i.value)];
-        const colors = ['#ff4fa3', '#c6ff3d', '#ff7a1a', '#8b5cf6', '#00d1d1', '#3d8bff'];
+        const colors = ['#ff8fb8', '#b5e48c', '#ffa173', '#a18bff', '#7fdcd0', '#5b8cff'];
         const code = (name.replace(/[^a-z]/gi, '').slice(0, 4).toUpperCase() || 'SQAD') + Math.floor(10 + Math.random() * 89);
         S.squads.unshift({ id: 'sq' + Date.now(), name, emoji: $('#sqEmoji', sh).value || '💸', color: colors[S.squads.length % colors.length],
           cat: $('#sqCat', sh).value, limit, stakes: $('#sqStakes', sh).value, members, code, streak: 0 });
@@ -769,7 +769,7 @@
       $('#stTest', sh).onclick = async () => {
         R.gemini.save({ key: $('#stKey', sh).value.trim(), model: $('#stModel', sh).value.trim() || 'gemini-2.5-flash' });
         const out = $('#stTestOut', sh); out.textContent = 'testing…';
-        try { const r = await R.gemini.generate('Reply with exactly: receipts ok', { temperature: 0 }); out.textContent = '✅ ' + r.slice(0, 40); }
+        try { const r = await R.gemini.generate('Reply with exactly: mochii ok', { temperature: 0 }); out.textContent = '✅ ' + r.slice(0, 40); }
         catch (e) { out.textContent = '❌ ' + e.message.slice(0, 80); }
       };
       $('#stVoiceTest', sh).onclick = () => { saveVoice(sh); R.voice.speak(`hey ${displayName()}, compound interest is just interest earning interest. let's get your money right.`); };
@@ -803,25 +803,25 @@
     if (kind === 'img') {
       await document.fonts?.ready;
       const c = R.shareImage(R.summaryData(a, name));
-      c.toBlob((b) => { const l = document.createElement('a'); l.href = URL.createObjectURL(b); l.download = `receipts-${a.monthLabel.toLowerCase()}-wrapped.png`; l.click(); });
+      c.toBlob((b) => { const l = document.createElement('a'); l.href = URL.createObjectURL(b); l.download = `mochii-${a.monthLabel.toLowerCase()}-wrapped.png`; l.click(); });
       return toast('image saved ⬇');
     }
     const url = kind === 'friends' ? `${baseUrl()}#/welcome` : `${baseUrl()}#/share/${b64.enc(R.summaryData(a, name))}`;
-    const text = kind === 'friends' ? 'our group chat’s money got wrapped 💀 get on receipts.' : `my ${a.monthLabel} money aura: ${a.aura.title} 💀`;
-    if (navigator.share && /Mobi/i.test(navigator.userAgent)) { try { await navigator.share({ title: 'receipts.', text, url }); return; } catch {} }
+    const text = kind === 'friends' ? 'our group chat’s money got wrapped 💀 get on mochii 🍡' : `my ${a.monthLabel} money aura: ${a.aura.title} 💀`;
+    if (navigator.share && /Mobi/i.test(navigator.userAgent)) { try { await navigator.share({ title: 'mochii', text, url }); return; } catch {} }
     await copy(url); toast('link copied 🔗 send it to the group chat');
   }
 
   // ---------- public share page ----------
   function renderShare(code) {
     let d; try { d = R.validateSummary(b64.dec(code)); } catch { phone.innerHTML = '<div class="welcome"><h1>link broke 💀</h1></div>'; return; }
-    phone.innerHTML = `<div class="welcome" style="background:#0a0a0c;color:#fff">
-      <div class="logo">receipts<i style="color:var(--lime)">.</i></div>
+    phone.innerHTML = `<div class="welcome" style="background:#22182a;color:#fff">
+      <div class="logo"><span class="mochi" aria-hidden="true"></span>mochi<b>i</b></div>
       <div style="margin:auto 0;padding:30px 0">
         <p style="font-size:18px;font-weight:600;margin-bottom:14px">${esc(d.n === 'You' ? 'someone' : d.n)} shared their wrapped with you 👀</p>
         ${R.summaryCard(d)}
       </div>
-      <a class="btn block" href="#/welcome" style="text-decoration:none">get your own receipts →</a>
+      <a class="btn block" href="#/welcome" style="text-decoration:none">get your own mochii 🍡</a>
       <p class="fine" style="color:#fff">spotify wrapped for your bank account</p>
     </div>`;
   }

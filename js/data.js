@@ -1,4 +1,4 @@
-/* receipts. — dummy data generator
+/* mochii — dummy data generator
  * Deterministic (seeded) fake bank transactions for you + your friends.
  * Swap this out for Plaid / Gmail-receipt (MCP + Gemini) ingestion later.
  */
@@ -20,15 +20,15 @@
 
   // ---------- categories ----------
   R.CATEGORIES = {
-    Coffee:        { emoji: '☕', color: '#ff7a1a' },
-    Food:          { emoji: '🌯', color: '#ffd23f' },
-    Delivery:      { emoji: '🛵', color: '#ff4fa3' },
-    Shopping:      { emoji: '🛍️', color: '#8b5cf6' },
+    Coffee:        { emoji: '☕', color: '#ffa173' },
+    Food:          { emoji: '🌯', color: '#ffd97a' },
+    Delivery:      { emoji: '🛵', color: '#ff8fb8' },
+    Shopping:      { emoji: '🛍️', color: '#a18bff' },
     Beauty:        { emoji: '💄', color: '#ff8fc7' },
-    Transport:     { emoji: '🚕', color: '#3d8bff' },
-    Groceries:     { emoji: '🥦', color: '#2ee59d' },
-    Entertainment: { emoji: '🎟️', color: '#c6ff3d' },
-    Subscriptions: { emoji: '🔁', color: '#00d1d1' },
+    Transport:     { emoji: '🚕', color: '#5b8cff' },
+    Groceries:     { emoji: '🥦', color: '#6fdba8' },
+    Entertainment: { emoji: '🎟️', color: '#b5e48c' },
+    Subscriptions: { emoji: '🔁', color: '#7fdcd0' },
     Other:         { emoji: '🧾', color: '#b8b8c8' },
   };
 
@@ -88,7 +88,7 @@
   // visits = merchant -> avg visits per month. trend multiplies the most recent month.
   R.PEOPLE = [
     {
-      id: 'me', name: 'You', handle: '@you', emoji: '🫵', color: '#c6ff3d', budget: 1500, seed: 7,
+      id: 'me', name: 'You', handle: '@you', emoji: '🫵', color: '#b5e48c', budget: 1500, seed: 7,
       visits: { Starbucks: 16, 'Blue Bottle': 4, Chipotle: 6, "Joe's Pizza": 4, DoorDash: 6, 'Uber Eats': 3,
         Amazon: 6, Target: 2, Uber: 5, Transit: 10, "Trader Joe's": 3, Steam: 1, 'AMC Theatres': 1 },
       subs: ['Spotify', 'Netflix', 'Hulu', 'iCloud+', 'Duolingo Super', 'Planet Fitness'],
@@ -96,28 +96,28 @@
       splurge: { m: 'Ticketmaster', amt: 214.5, note: 'floor seats. no regrets (some regrets)' },
     },
     {
-      id: 'maya', name: 'Maya', handle: '@mayasaves', emoji: '🧘', color: '#2ee59d', budget: 800, seed: 21,
+      id: 'maya', name: 'Maya', handle: '@mayasaves', emoji: '🧘', color: '#6fdba8', budget: 800, seed: 21,
       visits: { "Trader Joe's": 6, Transit: 30, Dunkin: 3, Chipotle: 2, Target: 1, 'AMC Theatres': 1 },
       subs: ['Spotify', 'iCloud+'], trend: 0.92,
     },
     {
-      id: 'marcus', name: 'Marcus', handle: '@marcuseats', emoji: '🍗', color: '#ff4fa3', budget: 1100, seed: 33,
+      id: 'marcus', name: 'Marcus', handle: '@marcuseats', emoji: '🍗', color: '#ff8fb8', budget: 1100, seed: 33,
       visits: { DoorDash: 17, 'Uber Eats': 9, 'Taco Bell': 6, 'Halal Cart': 5, Uber: 4, Steam: 1, Starbucks: 3 },
       subs: ['Spotify', 'Netflix', 'Xbox Game Pass', 'Crunchyroll'], trend: 1.08,
     },
     {
-      id: 'priya', name: 'Priya', handle: '@priyaxo', emoji: '💅', color: '#8b5cf6', budget: 1400, seed: 45,
+      id: 'priya', name: 'Priya', handle: '@priyaxo', emoji: '💅', color: '#a18bff', budget: 1400, seed: 45,
       visits: { Sephora: 4, SHEIN: 5, 'Urban Outfitters': 3, Amazon: 6, Sweetgreen: 8, Starbucks: 9, Lyft: 5, Target: 3 },
       subs: ['Spotify', 'Netflix', 'Hulu', 'Adobe CC'], trend: 1.21,
       splurge: { m: 'Urban Outfitters', amt: 168.0, note: 'it was on sale (it was not on sale)' },
     },
     {
-      id: 'jordan', name: 'Jordan', handle: '@jordanontour', emoji: '🎤', color: '#3d8bff', budget: 900, seed: 57,
+      id: 'jordan', name: 'Jordan', handle: '@jordanontour', emoji: '🎤', color: '#5b8cff', budget: 900, seed: 57,
       visits: { Uber: 14, Lyft: 6, Ticketmaster: 1.5, Bowlero: 2, "Joe's Pizza": 6, Chipotle: 5, Dunkin: 6 },
       subs: ['Spotify', 'Planet Fitness', 'Netflix'], trend: 1.02,
     },
     {
-      id: 'dev', name: 'Dev', handle: '@devgames', emoji: '🎮', color: '#ff7a1a', budget: 750, seed: 69,
+      id: 'dev', name: 'Dev', handle: '@devgames', emoji: '🎮', color: '#ffa173', budget: 750, seed: 69,
       visits: { Steam: 5, 'Taco Bell': 9, "Joe's Pizza": 5, Amazon: 5, Starbucks: 4, Transit: 14, 'Whole Foods': 2 },
       subs: ['Spotify', 'Xbox Game Pass', 'Crunchyroll', 'Duolingo Super'], trend: 0.88,
     },

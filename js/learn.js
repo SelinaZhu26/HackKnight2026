@@ -1,4 +1,4 @@
-/* receipts. — Learn: Duolingo-style financial literacy path
+/* mochii — Learn: Duolingo-style financial literacy path
  * Path of units → lessons (tip → quick exercises → Gemini-tutored "explain it" question).
  * Gamified with XP, daily goal + quests, streaks (with a freeze), hearts, a friends league and
  * Gemini-generated adaptive practice. Progress lives in localStorage under receipts.learn.
@@ -110,7 +110,7 @@
   function save() { try { localStorage.setItem(LS, JSON.stringify(L)); } catch {} }
 
   // ---------- Gemini: tutor + adaptive practice ----------
-  const TUTOR = `You are the tutor inside "receipts.", a Duolingo-style financial literacy app for ages 15-24 (U.S. context, fictional amounts).
+  const TUTOR = `You are the tutor inside "mochii", a Duolingo-style financial literacy app for ages 15-24 (U.S. context, fictional amounts).
 Rules: judge MEANING and reasoning, not exact wording. Accept concise correct answers and plain language; don't demand jargon.
 For judgment questions accept any defensible reasoning tied to the scenario. Never endorse a false claim to be nice: correct it kindly.
 If imperfect: acknowledge what is right, address ONE missing idea or misconception, and ask ONE focused follow-up question.
@@ -145,7 +145,7 @@ Return JSON {"verdict":"correct"|"partial"|"incorrect"|"unclear","feedback":stri
 
   async function geminiPractice(level, lessons) {
     const topics = lessons.slice(-8).map((l) => ({ id: l.id, title: l.title, idea: l.ex.find((x) => x.t === 'open')?.target || l.tip.replace(/\*\*/g, '') }));
-    const r = await R.gemini.generate(`You write practice questions for "receipts.", a Duolingo-style financial literacy app for ages 15-24 (U.S., fictional $ amounts).
+    const r = await R.gemini.generate(`You write practice questions for "mochii", a Duolingo-style financial literacy app for ages 15-24 (U.S., fictional $ amounts).
 Write 5 NEW exercises on these already-taught topics: ${JSON.stringify(topics)}
 Difficulty ${level}/5. Higher difficulty means multi-step calculations, reading a mini pay stub/statement in the question, competing priorities, or uncertain outcomes, not harder vocabulary. Never introduce untaught concepts. Fresh numbers and scenarios.
 Mix types. Return JSON {"exercises":[...]} where each item is ONE of:
@@ -190,7 +190,7 @@ Mix types. Return JSON {"exercises":[...]} where each item is ONE of:
   }
   function confetti(box) {
     if (reduceMotion()) return;
-    const cols = ['#c6ff3d', '#ff4fa3', '#8b5cf6', '#ffd23f', '#00d1d1', '#ff7a1a', '#2ee59d'];
+    const cols = ['#b5e48c', '#ff8fb8', '#a18bff', '#ffd97a', '#7fdcd0', '#ffa173', '#6fdba8'];
     const wrap = document.createElement('div'); wrap.className = 'confetti';
     wrap.innerHTML = Array.from({ length: 70 }, () => `<i style="left:${Math.random() * 100}%;background:${pick(cols)};animation-delay:${Math.random() * 0.5}s;animation-duration:${1.8 + Math.random() * 1.6}s;--r:${Math.random() * 720 - 360}deg;--dx:${Math.random() * 120 - 60}px;${Math.random() > 0.5 ? 'border-radius:50%;' : ''}"></i>`).join('');
     box.appendChild(wrap); setTimeout(() => wrap.remove(), 4200);
@@ -277,8 +277,8 @@ Mix types. Return JSON {"exercises":[...]} where each item is ONE of:
     const idx0 = R.LESSONS.findIndex((l) => l.id === u.lessons[0].id);
     const doneN = u.lessons.filter((l) => L.done[l.id]).length;
     const locked = idx0 > cur;
-    const dark = ['#c6ff3d', '#ffd23f', '#2ee59d', '#00d1d1', '#ff7a1a', '#ff4fa3'].includes(u.color);
-    return `<section class="unit ${locked ? 'locked' : ''}" style="--u:${u.color};--uink:${dark ? '#0a0a0c' : '#fff'}">
+    const dark = ['#b5e48c', '#ffd97a', '#6fdba8', '#7fdcd0', '#ffa173', '#ff8fb8'].includes(u.color);
+    return `<section class="unit ${locked ? 'locked' : ''}" style="--u:${u.color};--uink:${dark ? '#22182a' : '#fff'}">
       <div class="unit-banner">
         <div class="grow"><small>unit ${u.n} · ${doneN}/${u.lessons.length}</small><h3>${esc(u.title)}</h3></div>
         ${locked ? `<button class="jump" data-l="jump" data-u="${u.n}">jump here?</button>` : ''}

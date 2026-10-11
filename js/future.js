@@ -1,4 +1,4 @@
-/* receipts. — Future: the forecast playground
+/* mochii — Future: the forecast playground
  * A fixed set of widget templates (forecast, runway alarm, habit ripple, habits, red flags, net, daily receipts,
  * accounts) that people arrange however they like, plus a goal bar where AI (Gemini, or the offline planner)
  * re-arranges the space around what you're trying to do. State lives in localStorage under receipts.future.
@@ -14,7 +14,7 @@
   const $ = (s, el) => el.querySelector(s);
   const reduceMotion = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const ACCENTS = { lime: '#c6ff3d', pink: '#ff4fa3', purple: '#8b5cf6', blue: '#3d8bff', orange: '#ff7a1a', mint: '#2ee59d' };
+  const ACCENTS = { lime: '#b5e48c', pink: '#ff8fb8', purple: '#a18bff', blue: '#5b8cff', orange: '#ffa173', mint: '#6fdba8' };
   const WIDGETS = {
     forecast: { emoji: '📈', title: 'crystal ball', desc: 'what you’ll spend next, from tomorrow to next year' },
     runway:   { emoji: '🚨', title: 'runway alarm', desc: 'when your money runs out at this pace' },
@@ -161,7 +161,7 @@
     const local = F.parseGoal(text);
     if (!R.gemini.enabled) return local && { goal: local, plan: offlinePlan(local) };
     const stats = { monthlySpend: Math.round(D.run.monthlyOut), monthlyIncome: Math.round(D.run.monthlyIn), topHabits: M.habits.slice(0, 5).map((h) => ({ merchant: h.merchant, category: h.category, perMonth: +(h.perDay * 30.44).toFixed(1), avg: +h.avg.toFixed(2) })) };
-    const prompt = `You design the home screen of "receipts.", a Gen Z money app. A user typed a goal. Return JSON only:
+    const prompt = `You design the home screen of "mochii", a Gen Z money app. A user typed a goal. Return JSON only:
 {"goal":{"type":"cap"|"save"|"cut","amount":number|null,"period":"day"|"week"|"month"|"year","category":one of ${JSON.stringify(Object.keys(R.CATEGORIES))} or null,"label":"short lowercase label"},
  "order":[widget ids, most useful first],"hidden":[widget ids to hide, at most 2],"horizon":"1D"|"2D"|"1W"|"2W"|"1M"|"3M"|"6M"|"1Y","mode":"spend"|"balance",
  "accent":one of ${JSON.stringify(Object.keys(ACCENTS))},"headline":"lowercase, funny, max 8 words","changes":[2-4 short lowercase sentences saying what you changed and why]}
@@ -447,7 +447,7 @@ Goal: ${JSON.stringify(String(text).slice(0, 200))}`;
     const no = String(Math.round((d - new Date(d.getFullYear(), 0, 0)) / F.DAY)).padStart(4, '0');
     const L = [];
     const timeOf = (t) => (t.noTime ? '' : new Date(t.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }));
-    L.push({ t: 'logo', v: 'receipts.' });
+    L.push({ t: 'logo', v: 'mochii' });
     L.push({ t: 'c', v: `DAILY RECEIPT · NO. ${no}` });
     L.push({ t: 'c', v: d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase() });
     L.push({ t: 'rule' });
@@ -553,9 +553,9 @@ Goal: ${JSON.stringify(String(text).slice(0, 200))}`;
     const H = Math.max(960, ph + 200);
     const c = document.createElement('canvas'); c.width = W * S2; c.height = H * S2;
     const g = c.getContext('2d'); g.scale(S2, S2);
-    const bg = g.createLinearGradient(0, 0, W, H); bg.addColorStop(0, ACCENTS[S.accent] || '#c6ff3d'); bg.addColorStop(1, '#ff4fa3');
+    const bg = g.createLinearGradient(0, 0, W, H); bg.addColorStop(0, ACCENTS[S.accent] || '#b5e48c'); bg.addColorStop(1, '#ff8fb8');
     g.fillStyle = bg; g.fillRect(0, 0, W, H);
-    g.fillStyle = '#0a0a0c'; g.font = '800 26px "Bricolage Grotesque", system-ui'; g.textAlign = 'center';
+    g.fillStyle = '#22182a'; g.font = '800 26px "Fredoka", system-ui'; g.textAlign = 'center';
     g.fillText('my receipt for the day 🧾', W / 2, 60);
     const top = (H - ph) / 2 + 20;
     g.save(); g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = 30; g.shadowOffsetY = 12;
@@ -570,7 +570,7 @@ Goal: ${JSON.stringify(String(text).slice(0, 200))}`;
     const mono = (w, s) => `${w} ${s}px "Space Mono", ui-monospace, Menlo, monospace`;
     g.fillStyle = '#16161b';
     for (const l of lines) {
-      if (l.t === 'logo') { g.font = '800 34px "Bricolage Grotesque", system-ui'; g.textAlign = 'center'; g.fillText(l.v, W / 2, y + 18); y += lh.logo; continue; }
+      if (l.t === 'logo') { g.font = '800 34px "Fredoka", system-ui'; g.textAlign = 'center'; g.fillText(l.v, W / 2, y + 18); y += lh.logo; continue; }
       if (l.t === 'c') { g.font = mono(400, l.s ? 11 : 12); g.textAlign = 'center'; g.fillText(l.v, W / 2, y + 12); y += l.s ? lh.sm : lh.c; continue; }
       if (l.t === 'sub') { g.font = mono(400, 10); g.textAlign = 'left'; g.fillStyle = '#6b6b78'; g.fillText(l.v, px + 34, y + 9); g.fillStyle = '#16161b'; y += lh.sub; continue; }
       if (l.t === 'rule' || l.t === 'dash') { g.strokeStyle = '#16161b'; g.lineWidth = l.t === 'rule' ? 2 : 1; g.setLineDash(l.t === 'dash' ? [4, 4] : []); g.beginPath(); g.moveTo(px + 22, y + 8); g.lineTo(px + PW - 22, y + 8); g.stroke(); g.setLineDash([]); y += lh[l.t]; continue; }
@@ -580,8 +580,8 @@ Goal: ${JSON.stringify(String(text).slice(0, 200))}`;
       g.textAlign = 'right'; g.fillText(l.b, px + PW - 22, y + 14);
       y += lh[l.t] || 22;
     }
-    g.textAlign = 'center'; g.font = '700 16px "Bricolage Grotesque", system-ui'; g.fillStyle = '#0a0a0c';
-    g.fillText('receipts. · wrapped for your money', W / 2, H - 34);
+    g.textAlign = 'center'; g.font = '700 16px "Fredoka", system-ui'; g.fillStyle = '#22182a';
+    g.fillText('mochii · your soft little money buddy', W / 2, H - 34);
     return new Promise((ok) => c.toBlob(ok, 'image/png'));
   }
   async function shareDay(key, saveOnly) {
