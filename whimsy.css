@@ -1,0 +1,78 @@
+/* mochii — whimsy layer: logo hover, easter eggs, tiny delights */
+
+/* ---------- logo hover: mochi hops, squints happily, letters wave ---------- */
+.logo { cursor: default; }
+.logo .mochi::before { translate: var(--ex, 0) var(--ey, 0); transition: translate 0.12s ease-out, transform 0.15s; }
+.logo:hover .mochi { animation: wh-hop 0.62s cubic-bezier(0.3, 0.7, 0.4, 1) infinite; }
+.logo:hover .mochi::before { transform: scaleY(0.3); }
+.logo:hover .mochi::after { filter: saturate(1.8) brightness(1.05); transform: scale(1.15); }
+@keyframes wh-hop {
+  0%, 100% { transform: translateY(0) scale(1.1, 0.9); }
+  35% { transform: translateY(-0.32em) scale(0.92, 1.1); }
+  60% { transform: translateY(-0.36em) scale(1, 1); }
+  85% { transform: translateY(0) scale(1.12, 0.86); }
+}
+.logo .wl { display: inline-block; }
+.logo:hover .wl { animation: wh-wave 0.55s cubic-bezier(0.3, 0.7, 0.4, 1) calc(var(--i) * 55ms) both; }
+@keyframes wh-wave { 40% { transform: translateY(-0.22em) rotate(-6deg); } 70% { transform: translateY(0.04em); } }
+.logo .club { transition: transform 0.3s cubic-bezier(0.3, 1.6, 0.5, 1); }
+.logo:hover .club { transform: rotate(-8deg) scale(1.12); }
+
+/* clicked: big squish */
+.logo .mochi.wh-boop { animation: wh-boop 0.45s cubic-bezier(0.3, 1.6, 0.5, 1) !important; }
+@keyframes wh-boop { 0% { transform: scale(1.35, 0.6); } 50% { transform: scale(0.85, 1.2); } 100% { transform: scale(1); } }
+
+/* night owl: after 11pm the mochi gets a little moon */
+.wh-night .logo::after { content: '☾'; font-size: 0.42em; margin-left: 0.28em; color: var(--yellow); animation: wh-bob 2.4s ease-in-out infinite; }
+.wh-night .logo .mochi::before { transform: scaleY(0.45); }
+@keyframes wh-bob { 50% { transform: translateY(-0.18em) rotate(-12deg); } }
+
+/* ---------- floating particles (hearts, sparkles, dango) ---------- */
+.wh-p { position: fixed; z-index: 9999; pointer-events: none; font-size: 16px; line-height: 1;
+  animation: wh-float 1.1s cubic-bezier(0.2, 0.7, 0.3, 1) forwards; }
+@keyframes wh-float {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.4) rotate(0); }
+  15% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.15) rotate(var(--r)); }
+}
+.wh-rain { position: absolute; z-index: 9998; top: -40px; pointer-events: none; line-height: 1;
+  animation: wh-drop linear forwards; }
+@keyframes wh-drop { to { transform: translate(var(--dx), calc(100vh + 80px)) rotate(var(--r)); } }
+
+/* ---------- speech bubble ---------- */
+.wh-bubble { position: fixed; z-index: 9999; pointer-events: none;
+  background: #fff4ec; color: #22182a; font-family: var(--font); font-weight: 600; font-size: 14px;
+  padding: 8px 13px; border-radius: 16px 16px 16px 4px; white-space: nowrap;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  animation: wh-pop 0.35s cubic-bezier(0.3, 1.6, 0.5, 1) both; }
+.wh-bubble.flip { border-radius: 4px 16px 16px 16px; }
+.wh-bubble.out { animation: wh-unpop 0.25s ease-in forwards; }
+@keyframes wh-pop { from { opacity: 0; transform: translateY(6px) scale(0.6); } }
+@keyframes wh-unpop { to { opacity: 0; transform: translateY(-6px) scale(0.8); } }
+
+/* ---------- peeking / sleepy mochi buddy ---------- */
+.wh-buddy { position: absolute; right: 22px; bottom: 104px; z-index: 30; font-size: 44px;
+  transform: translateY(140%); transition: transform 0.55s cubic-bezier(0.3, 1.5, 0.5, 1); pointer-events: auto; cursor: pointer; }
+.wh-buddy.on { transform: translateY(0); }
+.wh-buddy .mochi { margin: 0; animation: wh-breathe 3s ease-in-out infinite; }
+.wh-buddy.sleep .mochi::before { transform: scaleY(0.2); }
+.wh-buddy .z { position: absolute; left: 70%; top: -10%; font-size: 15px; font-weight: 700; color: var(--purple); opacity: 0;
+  animation: wh-z 2.4s ease-out infinite; }
+.wh-buddy .z:nth-of-type(2) { animation-delay: 0.8s; } .wh-buddy .z:nth-of-type(3) { animation-delay: 1.6s; }
+.wh-buddy:not(.sleep) .z { display: none; }
+.wh-buddy.wave .mochi { animation: wh-wiggle 0.5s ease-in-out 3; }
+@keyframes wh-breathe { 50% { transform: scale(1.05, 0.95); } }
+@keyframes wh-z { 0% { opacity: 0; transform: translate(0, 0) scale(0.6); } 30% { opacity: 1; } 100% { opacity: 0; transform: translate(18px, -34px) scale(1.2); } }
+@keyframes wh-wiggle { 25% { transform: rotate(-12deg); } 75% { transform: rotate(12deg); } }
+
+/* ---------- small delights ---------- */
+.tab:hover span { animation: wh-jelly 0.5s ease; }
+@keyframes wh-jelly { 30% { transform: scale(1.25, 0.8); } 50% { transform: scale(0.85, 1.15); } 70% { transform: scale(1.08, 0.95); } }
+.pitch .tagline { cursor: default; }
+.pitch .tagline:hover { animation: wh-wiggle 0.45s ease-in-out; }
+.wh-secret .phone { animation: wh-rainbow 4s linear infinite; }
+@keyframes wh-rainbow { to { filter: hue-rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .logo:hover .mochi, .logo:hover .wl, .wh-buddy .mochi, .wh-secret .phone { animation: none !important; }
+}
