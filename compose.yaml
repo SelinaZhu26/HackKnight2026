@@ -3,5 +3,8 @@ services:
     image: "${IMAGE_REPOSITORY:?Set IMAGE_REPOSITORY in .env}:${IMAGE_VERSION:?Set IMAGE_VERSION in .env}"
     ports:
       - "127.0.0.1:${FINAPP_PORT:-3001}:3000"
+    environment:
+      # Tiger Cloud service URL (postgres://…?sslmode=require). Leave unset to run without cloud sync.
+      DATABASE_URL: "${DATABASE_URL:-}"
     restart: unless-stopped
     init: true

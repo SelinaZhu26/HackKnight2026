@@ -6,6 +6,7 @@ RUN npm ci --omit=dev --no-audit --no-fund
 
 FROM dependencies AS build
 COPY backend/app ./app
+COPY backend/lib ./lib
 COPY backend/scripts ./scripts
 COPY index.html styles.css future.css /app/
 COPY js /app/js

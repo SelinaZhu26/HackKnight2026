@@ -11,6 +11,8 @@
 !backend/Dockerfile
 !backend/app/
 !backend/app/**
+!backend/lib/
+!backend/lib/**
 !backend/scripts/
 !backend/scripts/**
 

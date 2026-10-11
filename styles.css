@@ -915,3 +915,14 @@ h1, h2, h3, .title, .hero h2, .imp-h, .slide .mega, .slide .huge, .slide .big, .
 .slide .mega { font-size: 64px; }
 .slide .huge { font-size: 46px; }
 .welcome h1 { font-size: 48px; }
+
+/* Tiger Data panel in settings */
+.tiger-toggle { gap: 10px; font-size: 14px; font-weight: 600; margin-bottom: 10px; cursor: pointer; }
+.tiger-toggle input { width: 18px; height: 18px; accent-color: var(--lime); }
+.tiger-card { padding: 14px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
+.tiger-card small { font-size: 12px; }
+.tiger-bars { display: flex; align-items: flex-end; gap: 4px; height: 70px; }
+.tiger-bars i { flex: 1; border-radius: 5px 5px 2px 2px; background: var(--orange); min-height: 4px; }
+.tiger-stats { display: flex; gap: 8px; }
+.tiger-stats span { flex: 1; background: var(--surface-2); border-radius: 12px; padding: 8px; text-align: center; font-size: 11px; color: var(--muted); }
+.tiger-stats b { display: block; font-size: 18px; color: var(--text); }
