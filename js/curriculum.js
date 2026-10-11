@@ -1,4 +1,4 @@
-/* mochii — financial literacy curriculum (see lesson-plan.md)
+/* mochii club — financial literacy curriculum (see lesson-plan.md)
  * 12 units × 6 lessons. Each lesson: a short tip, quick exercises, then an open "explain it" question
  * that Gemini tutors (offline: regex `keys`, of which `min` must match; default all).
  * Exercise types: mc {o, a, why} · blank {q with ___, a[], bank[]} · num {a, pre, suf} · match {pairs} · open {target, keys, hint}

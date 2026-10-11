@@ -71,6 +71,10 @@ input, select, textarea { font: inherit; color: inherit; }
 
 .logo { font-weight: 700; letter-spacing: -0.02em; font-size: 26px; line-height: 1; display: inline-flex; align-items: center; }
 .logo b { font-weight: 700; color: var(--pink); }
+.logo .club { margin-left: 0.3em; padding: 0.12em 0.42em 0.16em; border-radius: 999px; font-size: 0.5em; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase; background: var(--pink); color: #22182a; align-self: center; }
+.welcome .logo .club { background: #22182a; color: #ffd3e3; }
+.story .logo .club { background: rgba(255, 255, 255, 0.85); }
 
 /* mochii mascot: a squishy little mochi drawn in CSS (eyes + blush), sized by font-size */
 .mochi { position: relative; display: inline-block; flex-shrink: 0; width: 1.25em; height: 1em; margin-right: 0.24em;

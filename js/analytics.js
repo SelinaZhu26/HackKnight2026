@@ -1,4 +1,4 @@
-/* mochii — analytics engine
+/* mochii club — analytics engine
  * Turns a flat transaction list into Wrapped stats, insights, predictions and roasts.
  */
 (function (global) {

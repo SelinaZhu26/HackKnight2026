@@ -1,4 +1,4 @@
-/* mochii — Learn: Duolingo-style financial literacy path
+/* mochii club — Learn: Duolingo-style financial literacy path
  * Path of units → lessons (tip → quick exercises → Gemini-tutored "explain it" question).
  * Gamified with XP, daily goal + quests, streaks (with a freeze), hearts, a friends league and
  * Gemini-generated adaptive practice. Progress lives in localStorage under receipts.learn.
@@ -110,7 +110,7 @@
   function save() { try { localStorage.setItem(LS, JSON.stringify(L)); } catch {} }
 
   // ---------- Gemini: tutor + adaptive practice ----------
-  const TUTOR = `You are the tutor inside "mochii", a Duolingo-style financial literacy app for ages 15-24 (U.S. context, fictional amounts).
+  const TUTOR = `You are the tutor inside "mochii club", a Duolingo-style financial literacy app for ages 15-24 (U.S. context, fictional amounts).
 Rules: judge MEANING and reasoning, not exact wording. Accept concise correct answers and plain language; don't demand jargon.
 For judgment questions accept any defensible reasoning tied to the scenario. Never endorse a false claim to be nice: correct it kindly.
 If imperfect: acknowledge what is right, address ONE missing idea or misconception, and ask ONE focused follow-up question.
@@ -145,7 +145,7 @@ Return JSON {"verdict":"correct"|"partial"|"incorrect"|"unclear","feedback":stri
 
   async function geminiPractice(level, lessons) {
     const topics = lessons.slice(-8).map((l) => ({ id: l.id, title: l.title, idea: l.ex.find((x) => x.t === 'open')?.target || l.tip.replace(/\*\*/g, '') }));
-    const r = await R.gemini.generate(`You write practice questions for "mochii", a Duolingo-style financial literacy app for ages 15-24 (U.S., fictional $ amounts).
+    const r = await R.gemini.generate(`You write practice questions for "mochii club", a Duolingo-style financial literacy app for ages 15-24 (U.S., fictional $ amounts).
 Write 5 NEW exercises on these already-taught topics: ${JSON.stringify(topics)}
 Difficulty ${level}/5. Higher difficulty means multi-step calculations, reading a mini pay stub/statement in the question, competing priorities, or uncertain outcomes, not harder vocabulary. Never introduce untaught concepts. Fresh numbers and scenarios.
 Mix types. Return JSON {"exercises":[...]} where each item is ONE of:

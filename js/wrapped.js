@@ -1,4 +1,4 @@
-/* mochii — the Wrapped story player + slides */
+/* mochii club — the Wrapped story player + slides */
 (function (global) {
   const R = (global.R = global.R || {});
   const $ = (s, el = document) => el.querySelector(s);
@@ -30,7 +30,7 @@
       this.el.className = 'story';
       this.el.innerHTML = `
         <div class="bars">${slides.map(() => '<div><i></i></div>').join('')}</div>
-        <div class="top"><div class="logo"><span class="mochi" aria-hidden="true"></span>mochi<b>i</b></div><button class="x" aria-label="close">✕</button></div>
+        <div class="top"><div class="logo"><span class="mochi" aria-hidden="true"></span>mochi<b>i</b><span class="club">club</span></div><button class="x" aria-label="close">✕</button></div>
         <div class="paused">paused</div>
         ${slides.map((s, i) => `<section class="slide" data-i="${i}" style="background:${s.bg};color:${s.fg || '#fff'}">
           ${s.shapes ? shapes(s.shapes) : ''}<div class="content">${s.html}</div></section>`).join('')}`;
@@ -354,7 +354,7 @@
         <div><small>On repeat</small><b>${d.vm && d.v !== undefined ? `${esc(d.vm)} ×${d.v}` : '—'}</b></div>
         <div><small>Health score</small><b>${d.s}/100 · ${esc(d.g)}</b></div>
       </div>
-      <div class="foot"><span>${esc(d.nx)} prediction: $${(+d.p).toLocaleString()}</span><span>mochii 🍡</span></div>
+      <div class="foot"><span>${esc(d.nx)} prediction: $${(+d.p).toLocaleString()}</span><span>mochii club 🍡</span></div>
     </div>`;
   };
 
@@ -372,7 +372,7 @@
     g.fillStyle = '#22182a'; g.beginPath(); g.arc(120, 1700, 200, 0, Math.PI * 2); g.fill();
     const F = (w, s) => `${w} ${s}px "Fredoka", system-ui, sans-serif`;
     g.fillStyle = '#22182a';
-    g.font = F(800, 64); g.fillText('mochii', 90, 160);
+    g.font = F(800, 64); g.fillText('mochii club', 90, 160);
     g.font = F(700, 52); g.globalAlpha = 0.75; g.fillText(`${d.n === 'You' ? 'my' : d.n + '’s'} ${d.m} wrapped`, 90, 380); g.globalAlpha = 1;
     // wrap aura title
     g.font = F(800, 120);
@@ -393,7 +393,7 @@
     });
     g.fillStyle = '#fff'; g.font = F(800, 46);
     g.fillText(`${d.nx} prediction: $${(+d.p).toLocaleString()}`, 360, 1720);
-    g.font = F(600, 34); g.globalAlpha = 0.8; g.fillText('prove me wrong → get mochii 🍡', 360, 1780);
+    g.font = F(600, 34); g.globalAlpha = 0.8; g.fillText('prove me wrong → join the mochii club 🍡', 360, 1780);
     return c;
   };
 

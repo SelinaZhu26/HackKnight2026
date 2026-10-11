@@ -1,4 +1,4 @@
-# mochii 🍡
+# mochii club 🍡
 
 **Spotify Wrapped for your finances + social accountability for Gen Z.**
 

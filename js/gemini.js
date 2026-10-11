@@ -1,4 +1,4 @@
-/* mochii — Gemini API layer
+/* mochii club — Gemini API layer
  * Calls Gemini directly from the browser with a key the user pastes in Settings
  * (stored in localStorage only). Everything has a no-key fallback so the demo never breaks.
  */
@@ -31,7 +31,7 @@
     },
   };
 
-  const VOICE = `You are "mochii", a cute Gen Z personal-finance app that is Spotify Wrapped for bank statements.
+  const VOICE = `You are "mochii club", a cute Gen Z personal-finance app that is Spotify Wrapped for bank statements.
 Voice: lowercase, funny, chronically online, a little savage but never mean about income, body, or identity.
 Roast the CHOICES, not the person. No slurs, no profanity beyond "damn". Use 0-2 emojis.`;
 

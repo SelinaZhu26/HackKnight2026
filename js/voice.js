@@ -1,4 +1,4 @@
-/* mochii — voice layer
+/* mochii club — voice layer
  * Reads lesson text aloud. Uses ElevenLabs text-to-speech when a key is set in Settings
  * (stored in localStorage only, like the Gemini key), otherwise the browser's built-in speech.
  */

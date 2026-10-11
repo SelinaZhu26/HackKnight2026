@@ -1,4 +1,4 @@
-/* mochii — forecast engine
+/* mochii club — forecast engine
  * Lightweight, explainable spending + balance prediction. No ML library, just statistics you can defend:
  *  - subscriptions / repeat bills are scheduled on the day they normally hit
  *  - everyday spending is modeled per day-of-week (recency-weighted mean + variance, shrunk toward the overall mean)

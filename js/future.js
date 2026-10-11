@@ -1,4 +1,4 @@
-/* mochii — Future: the forecast playground
+/* mochii club — Future: the forecast playground
  * A fixed set of widget templates (forecast, runway alarm, habit ripple, habits, red flags, net, daily receipts,
  * accounts) that people arrange however they like, plus a goal bar where AI (Gemini, or the offline planner)
  * re-arranges the space around what you're trying to do. State lives in localStorage under receipts.future.
@@ -161,7 +161,7 @@
     const local = F.parseGoal(text);
     if (!R.gemini.enabled) return local && { goal: local, plan: offlinePlan(local) };
     const stats = { monthlySpend: Math.round(D.run.monthlyOut), monthlyIncome: Math.round(D.run.monthlyIn), topHabits: M.habits.slice(0, 5).map((h) => ({ merchant: h.merchant, category: h.category, perMonth: +(h.perDay * 30.44).toFixed(1), avg: +h.avg.toFixed(2) })) };
-    const prompt = `You design the home screen of "mochii", a Gen Z money app. A user typed a goal. Return JSON only:
+    const prompt = `You design the home screen of "mochii club", a Gen Z money app. A user typed a goal. Return JSON only:
 {"goal":{"type":"cap"|"save"|"cut","amount":number|null,"period":"day"|"week"|"month"|"year","category":one of ${JSON.stringify(Object.keys(R.CATEGORIES))} or null,"label":"short lowercase label"},
  "order":[widget ids, most useful first],"hidden":[widget ids to hide, at most 2],"horizon":"1D"|"2D"|"1W"|"2W"|"1M"|"3M"|"6M"|"1Y","mode":"spend"|"balance",
  "accent":one of ${JSON.stringify(Object.keys(ACCENTS))},"headline":"lowercase, funny, max 8 words","changes":[2-4 short lowercase sentences saying what you changed and why]}
@@ -447,7 +447,7 @@ Goal: ${JSON.stringify(String(text).slice(0, 200))}`;
     const no = String(Math.round((d - new Date(d.getFullYear(), 0, 0)) / F.DAY)).padStart(4, '0');
     const L = [];
     const timeOf = (t) => (t.noTime ? '' : new Date(t.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }));
-    L.push({ t: 'logo', v: 'mochii' });
+    L.push({ t: 'logo', v: 'mochii club' });
     L.push({ t: 'c', v: `DAILY RECEIPT · NO. ${no}` });
     L.push({ t: 'c', v: d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase() });
     L.push({ t: 'rule' });
@@ -581,7 +581,7 @@ Goal: ${JSON.stringify(String(text).slice(0, 200))}`;
       y += lh[l.t] || 22;
     }
     g.textAlign = 'center'; g.font = '700 16px "Fredoka", system-ui'; g.fillStyle = '#22182a';
-    g.fillText('mochii · your soft little money buddy', W / 2, H - 34);
+    g.fillText('mochii club · your soft little money buddy', W / 2, H - 34);
     return new Promise((ok) => c.toBlob(ok, 'image/png'));
   }
   async function shareDay(key, saveOnly) {

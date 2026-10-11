@@ -1,4 +1,4 @@
-/* mochii — dummy data generator
+/* mochii club — dummy data generator
  * Deterministic (seeded) fake bank transactions for you + your friends.
  * Swap this out for Plaid / Gmail-receipt (MCP + Gemini) ingestion later.
  */

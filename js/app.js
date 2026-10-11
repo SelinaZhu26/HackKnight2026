@@ -1,4 +1,4 @@
-/* mochii — app shell, screens and state */
+/* mochii club — app shell, screens and state */
 (function () {
   const { esc, money } = R;
   const $ = (s, el = document) => el.querySelector(s);
@@ -111,7 +111,7 @@
       <div class="shape ring" style="width:110px;height:110px;top:70px;right:24px;border-width:14px;border-color:var(--purple);animation:float 6s ease-in-out infinite alternate-reverse"></div>`;
     if (step === 1) {
       phone.innerHTML = `<div class="welcome">${shapes}
-        <div class="ob-top"><div class="logo"><span class="mochi" aria-hidden="true"></span>mochi<b>i</b></div>${dots}</div>
+        <div class="ob-top"><div class="logo"><span class="mochi" aria-hidden="true"></span>mochi<b>i</b><span class="club">club</span></div>${dots}</div>
         <h1>your money had a month. let’s talk about it.</h1>
         <p class="lead">spotify wrapped for your bank statement, plus friends who keep you accountable.</p>
         <form class="ob-name" id="obName">
@@ -129,7 +129,7 @@
     }
     let pick = S.welcomeSource || 'demo';
     phone.innerHTML = `<div class="welcome step2">
-      <div class="ob-top"><button class="ob-back" id="obBack" aria-label="back">←</button><div class="logo"><span class="mochi" aria-hidden="true"></span>mochi<b>i</b></div>${dots}</div>
+      <div class="ob-top"><button class="ob-back" id="obBack" aria-label="back">←</button><div class="logo"><span class="mochi" aria-hidden="true"></span>mochi<b>i</b><span class="club">club</span></div>${dots}</div>
       <h2 class="ob-h">nice to meet you, ${esc(displayName())} 👋</h2>
       <p class="lead">where should we pull your receipts from?</p>
       <div class="ob-sources" role="radiogroup">${SOURCES.map((o) => `
@@ -406,7 +406,7 @@
   function renderShell(page) {
     if (!TABS.some((t) => t[0] === page)) page = 'home';
     phone.innerHTML = `
-      <div class="topbar"><div class="logo"><span class="mochi" aria-hidden="true"></span>mochi<b>i</b></div>
+      <div class="topbar"><div class="logo"><span class="mochi" aria-hidden="true"></span>mochi<b>i</b><span class="club">club</span></div>
         <div class="row" style="gap:8px"><button class="icon-btn" data-act="gmail" title="import receipts">📧</button><button class="icon-btn" data-act="settings" title="settings">⚙️</button></div></div>
       <main class="screen" id="screen"></main>
       <nav class="tabbar">${TABS.map(([id, ic, lb]) => `<a class="tab ${id === page ? 'on' : ''}" href="#/${id}"><span>${ic}</span>${lb}</a>`).join('')}</nav>`;
@@ -769,7 +769,7 @@
       $('#stTest', sh).onclick = async () => {
         R.gemini.save({ key: $('#stKey', sh).value.trim(), model: $('#stModel', sh).value.trim() || 'gemini-2.5-flash' });
         const out = $('#stTestOut', sh); out.textContent = 'testing…';
-        try { const r = await R.gemini.generate('Reply with exactly: mochii ok', { temperature: 0 }); out.textContent = '✅ ' + r.slice(0, 40); }
+        try { const r = await R.gemini.generate('Reply with exactly: mochii club ok', { temperature: 0 }); out.textContent = '✅ ' + r.slice(0, 40); }
         catch (e) { out.textContent = '❌ ' + e.message.slice(0, 80); }
       };
       $('#stVoiceTest', sh).onclick = () => { saveVoice(sh); R.voice.speak(`hey ${displayName()}, compound interest is just interest earning interest. let's get your money right.`); };
@@ -803,12 +803,12 @@
     if (kind === 'img') {
       await document.fonts?.ready;
       const c = R.shareImage(R.summaryData(a, name));
-      c.toBlob((b) => { const l = document.createElement('a'); l.href = URL.createObjectURL(b); l.download = `mochii-${a.monthLabel.toLowerCase()}-wrapped.png`; l.click(); });
+      c.toBlob((b) => { const l = document.createElement('a'); l.href = URL.createObjectURL(b); l.download = `mochii-club-${a.monthLabel.toLowerCase()}-wrapped.png`; l.click(); });
       return toast('image saved ⬇');
     }
     const url = kind === 'friends' ? `${baseUrl()}#/welcome` : `${baseUrl()}#/share/${b64.enc(R.summaryData(a, name))}`;
-    const text = kind === 'friends' ? 'our group chat’s money got wrapped 💀 get on mochii 🍡' : `my ${a.monthLabel} money aura: ${a.aura.title} 💀`;
-    if (navigator.share && /Mobi/i.test(navigator.userAgent)) { try { await navigator.share({ title: 'mochii', text, url }); return; } catch {} }
+    const text = kind === 'friends' ? 'our group chat’s money got wrapped 💀 join the mochii club 🍡' : `my ${a.monthLabel} money aura: ${a.aura.title} 💀`;
+    if (navigator.share && /Mobi/i.test(navigator.userAgent)) { try { await navigator.share({ title: 'mochii club', text, url }); return; } catch {} }
     await copy(url); toast('link copied 🔗 send it to the group chat');
   }
 
@@ -816,12 +816,12 @@
   function renderShare(code) {
     let d; try { d = R.validateSummary(b64.dec(code)); } catch { phone.innerHTML = '<div class="welcome"><h1>link broke 💀</h1></div>'; return; }
     phone.innerHTML = `<div class="welcome" style="background:#22182a;color:#fff">
-      <div class="logo"><span class="mochi" aria-hidden="true"></span>mochi<b>i</b></div>
+      <div class="logo"><span class="mochi" aria-hidden="true"></span>mochi<b>i</b><span class="club">club</span></div>
       <div style="margin:auto 0;padding:30px 0">
         <p style="font-size:18px;font-weight:600;margin-bottom:14px">${esc(d.n === 'You' ? 'someone' : d.n)} shared their wrapped with you 👀</p>
         ${R.summaryCard(d)}
       </div>
-      <a class="btn block" href="#/welcome" style="text-decoration:none">get your own mochii 🍡</a>
+      <a class="btn block" href="#/welcome" style="text-decoration:none">join the mochii club 🍡</a>
       <p class="fine" style="color:#fff">spotify wrapped for your bank account</p>
     </div>`;
   }
