@@ -88,6 +88,9 @@ runs as the dedicated `finapp-runner` user. It calls the root-owned
 The helper pulls the image, updates `/apps/finapp/.env`, waits for container
 health, checks public HTTPS, and restores the previous image version if a
 deployment check fails. It rejects image versions that are not full commit SHAs.
+It removes unused older app images before and after deployment, keeping the
+active release and one rollback release recorded in `/apps/finapp/.rollback-image`.
+Older releases remain in Docker Hub and can be pulled again when needed.
 
 Only pushes or manual runs for this repository's `main` branch deploy. The
 workflow does not run on pull requests. Nginx and Compose configuration remain

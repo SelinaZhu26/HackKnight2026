@@ -17,6 +17,30 @@ docker compose config --quiet
 previous_version=$(sed -n 's/^IMAGE_VERSION=//p' .env)
 test -n "$previous_version"
 
+repository=$(docker compose config --images)
+repository=${repository%:*}
+rollback_image=$(cat .rollback-image 2>/dev/null || true)
+
+# Keep the active release and one rollback release locally. Older tags remain
+# available in the registry; caching every release fills the VM's small disk.
+cleanup_images() {
+    local image
+    while IFS= read -r image; do
+        [[ -n "$image" ]] || continue
+        if [[ "$image" == "$repository:$version" ||
+              "$image" == "$repository:$previous_version" ||
+              "$image" == "$rollback_image" ]]; then
+            continue
+        fi
+        # Never delete an image used by another running or stopped container.
+        if [[ -n "$(docker ps -aq --filter "ancestor=$image")" ]]; then
+            continue
+        fi
+        docker image rm "$image" || echo "Could not remove cached image $image" >&2
+    done < <(docker image ls "$repository" --format '{{.Repository}}:{{.Tag}}')
+}
+cleanup_images
+
 # Download before altering the live release. The current root-owned Compose
 # file and .env determine the repository and port.
 env IMAGE_VERSION="$version" docker compose pull --quiet
@@ -45,5 +69,10 @@ curl --fail --silent --show-error --retry 3 --retry-delay 2 \
 rollback_needed=0
 trap - ERR
 rm -f .env.previous
+if [[ "$previous_version" != "$version" ]]; then
+    rollback_image="$repository:$previous_version"
+    printf '%s\n' "$rollback_image" > .rollback-image
+fi
+cleanup_images
 docker compose ps
 echo "Deployed excsi/finapp:$version successfully."
