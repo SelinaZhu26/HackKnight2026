@@ -885,11 +885,11 @@
     sheet(`<h3>settings</h3><p class="sub">${R.db.on ? 'saved in this browser and synced to Tiger Cloud.' : 'everything is stored locally in this browser.'}</p>
       <div class="field"><label>display name</label><input class="input" id="stName" maxlength="18" value="${esc(S.name.trim().slice(0, 18))}" placeholder="You"></div>
       <div class="field"><label>monthly budget ($)</label><input class="input" id="stBudget" type="number" min="0.01" step="0.01" value="${S.budget}"></div>
-      <div class="section-h" style="margin-top:8px"><h3>✨ Gemini</h3><small>${R.gemini.enabled ? 'connected' : 'off — using roast bot'}</small></div>
+      <div class="section-h" style="margin-top:8px"><h3>✨ Gemini</h3><small>${g.key ? 'connected' : R.gemini.server ? 'built in ✨ · or use your own key' : 'off — using roast bot'}</small></div>
       <div class="field"><label>API key (aistudio.google.com/apikey)</label><input class="input" id="stKey" type="password" value="${esc(g.key || '')}" placeholder="paste your Gemini API key"></div>
       <div class="field"><label>model</label><input class="input" id="stModel" value="${esc(g.model)}"></div>
       <button class="btn sm ghost" id="stTest">test connection</button> <span id="stTestOut" class="muted" style="font-size:13px;margin-left:6px"></span>
-      <div class="section-h" style="margin-top:8px"><h3>🎧 ElevenLabs voice</h3><small>${R.voice.eleven ? 'connected' : 'off — using browser voice'}</small></div>
+      <div class="section-h" style="margin-top:8px"><h3>🎧 ElevenLabs voice</h3><small>${R.voice.config.key ? 'connected' : R.voice.server ? 'built in ✨ · or use your own key' : 'off — using browser voice'}</small></div>
       <div class="field"><label>API key (elevenlabs.io → profile → API keys)</label><input class="input" id="stVoiceKey" type="password" value="${esc(R.voice.config.key || '')}" placeholder="sk_…"></div>
       <div class="field"><label>voice ID (optional)</label><input class="input" id="stVoiceId" value="${esc(R.voice.config.voiceId || '')}" placeholder="21m00Tcm4TlvDq8ikWAM"></div>
       <button class="btn sm ghost" id="stVoiceTest">🔊 test voice</button>

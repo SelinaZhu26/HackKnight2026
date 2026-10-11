@@ -42,4 +42,4 @@
 ---
 
 **Run:** `python3 -m http.server 5173` (static) or `cd backend && npm ci && npm run dev` (with Tiger). Tests: `node --test tests/regressions.test.js tests/learn.test.js`
-**Keys:** the Gemini and ElevenLabs keys are pasted in ⚙️ and stay in the browser's localStorage. They are never committed or synced.
+**Keys:** on mochii.club, Gemini and ElevenLabs keys live in the server's `.env` behind rate-limited `/api/ai/*` routes, so judges get AI with zero setup and never see a key. Anyone can still paste their own key in ⚙️.

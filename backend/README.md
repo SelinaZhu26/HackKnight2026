@@ -173,6 +173,10 @@ Proxy every HTTPS path, including future `/api/*` routes, rather than adding
 static-file exceptions. Port 80 retains the ACME challenge path and redirects
 other requests to HTTPS.
 
-This server only serves the frontend. Gemini and ElevenLabs currently retain
-their existing browser behavior; no API proxy or server-side secret storage is
-implemented here.
+Set `GEMINI_API_KEY` and `ELEVENLABS_API_KEY` in the server's `.env` so every
+visitor gets AI features without pasting a key. The keys stay on the server: the
+browser calls `/api/ai/gemini` and `/api/ai/tts`, which only accept same-origin
+requests and are rate limited per IP (20 Gemini / 15 TTS per minute) and per day
+(`AI_DAILY_GEMINI`, default 3000; `AI_DAILY_TTS`, default 1500). `/api/health`
+reports `ai: { gemini, voice }`. A key pasted in ⚙️ Settings still takes priority.
+After editing `.env`, run `docker compose up -d` to restart with the new values.

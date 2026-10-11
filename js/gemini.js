@@ -19,11 +19,27 @@
       return cfg;
     },
     save(cfg) { try { localStorage.setItem(LS, JSON.stringify(cfg)); } catch {} },
-    get enabled() { return !!this.config.key; },
+    // Set by R.db.init() when the backend holds a GEMINI_API_KEY; a key pasted in Settings still wins.
+    server: false,
+    get enabled() { return !!this.config.key || this.server; },
 
     async generate(prompt, { json = false, temperature = 1.0 } = {}) {
+      if (!this.enabled) throw new Error('no-key');
+      const text = this.config.key ? await this.direct(prompt, { json, temperature }) : await this.viaServer(prompt, { json, temperature });
+      return json ? JSON.parse(text.replace(/^```json|```$/g, '').trim()) : text.trim();
+    },
+
+    async viaServer(prompt, { json, temperature }) {
+      const res = await fetch('/api/ai/gemini', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt, json, temperature }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(`Gemini ${res.status}: ${data.error || ''}`);
+      return data.text || '';
+    },
+
+    async direct(prompt, { json, temperature }) {
       const { key, model } = this.config;
-      if (!key) throw new Error('no-key');
       const body = JSON.stringify({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: { temperature, ...(json ? { responseMimeType: 'application/json' } : {}) },
@@ -40,8 +56,7 @@
       }
       if (!res.ok) throw new Error(`Gemini ${res.status}: ${(await res.text()).slice(0, 160)}`);
       const data = await res.json();
-      const text = data.candidates?.[0]?.content?.parts?.filter((p) => !p.thought).map((p) => p.text || '').join('') || '';
-      return json ? JSON.parse(text.replace(/^```json|```$/g, '').trim()) : text.trim();
+      return data.candidates?.[0]?.content?.parts?.filter((p) => !p.thought).map((p) => p.text || '').join('') || '';
     },
   };
 
