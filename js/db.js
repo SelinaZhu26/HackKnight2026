@@ -34,6 +34,8 @@
         const r = await fetch('/api/health', { signal: AbortSignal.timeout(2000), cache: 'no-store' });
         const j = r.ok ? await r.json() : {};
         this.available = j.db === 'ok'; this.engine = j.engine || '';
+        if (R.gemini) R.gemini.server = !!j.ai?.gemini;
+        if (R.voice) R.voice.server = !!j.ai?.voice;
       } catch { this.available = false; }
     },
 

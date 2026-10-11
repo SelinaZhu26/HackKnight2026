@@ -5,29 +5,60 @@
 (function (global) {
   const R = (global.R = global.R || {});
   const LS = 'receipts.gemini';
+  // gemini-2.5-* is closed to new API keys, so older saved configs are moved onto the current default.
+  // 3.5-flash is the steady one; 3.8-flash is newer but often returns 503 under load, so it's the backup.
+  const DEFAULT_MODEL = 'gemini-3.5-flash';
+  const BACKUP_MODEL = 'gemini-3.8-flash';
+  const RETIRED = /^gemini-(1\.|2\.0|2\.5)/;
 
   R.gemini = {
+    DEFAULT_MODEL,
     get config() {
-      try { return JSON.parse(localStorage.getItem(LS)) || {}; } catch { return {}; }
+      let cfg;
+      try { cfg = JSON.parse(localStorage.getItem(LS)) || {}; } catch { return {}; }
+      if (!cfg.model || RETIRED.test(cfg.model)) cfg.model = DEFAULT_MODEL;
+      return cfg;
     },
     save(cfg) { try { localStorage.setItem(LS, JSON.stringify(cfg)); } catch {} },
-    get enabled() { return !!this.config.key; },
+    // Set by R.db.init() when the backend holds a GEMINI_API_KEY; a key pasted in Settings still wins.
+    server: false,
+    get enabled() { return !!this.config.key || this.server; },
 
     async generate(prompt, { json = false, temperature = 1.0 } = {}) {
-      const { key, model = 'gemini-2.5-flash' } = this.config;
-      if (!key) throw new Error('no-key');
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { temperature, ...(json ? { responseMimeType: 'application/json' } : {}) },
-        }),
+      if (!this.enabled) throw new Error('no-key');
+      const text = this.config.key ? await this.direct(prompt, { json, temperature }) : await this.viaServer(prompt, { json, temperature });
+      return json ? JSON.parse(text.replace(/^```json|```$/g, '').trim()) : text.trim();
+    },
+
+    async viaServer(prompt, { json, temperature }) {
+      const res = await fetch('/api/ai/gemini', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt, json, temperature }),
       });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(`Gemini ${res.status}: ${data.error || ''}`);
+      return data.text || '';
+    },
+
+    async direct(prompt, { json, temperature }) {
+      const { key, model } = this.config;
+      const body = JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: { temperature, ...(json ? { responseMimeType: 'application/json' } : {}) },
+      });
+      const call = (m) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, body,
+      });
+      // Overloaded (429/503) or unknown (404) model: switch to the other flash right away, then one delayed retry.
+      const other = model === DEFAULT_MODEL ? BACKUP_MODEL : DEFAULT_MODEL;
+      let res = await call(model);
+      for (const [next, wait] of [[other, 0], [model, 1500]]) {
+        if (![404, 429, 503].includes(res.status)) break;
+        if (wait) await new Promise((r) => setTimeout(r, wait));
+        res = await call(next);
+      }
       if (!res.ok) throw new Error(`Gemini ${res.status}: ${(await res.text()).slice(0, 160)}`);
       const data = await res.json();
-      const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text).join('') || '';
-      return json ? JSON.parse(text.replace(/^```json|```$/g, '').trim()) : text.trim();
+      return data.candidates?.[0]?.content?.parts?.filter((p) => !p.thought).map((p) => p.text || '').join('') || '';
     },
   };
 

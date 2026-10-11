@@ -177,3 +177,25 @@ test('CSV merchant normalization always stays within the summary limit', () => {
   assert.equal(txns[0].merchant.length, 28);
   assert.doesNotThrow(() => R.soloSlides({ a: R.analyze(txns), name: 'You' }));
 });
+
+test('saved Gemini configs on retired models move to the current default', (t) => {
+  const original = global.localStorage.getItem;
+  t.after(() => { global.localStorage.getItem = original; });
+  for (const [saved, expected] of [[undefined, R.gemini.DEFAULT_MODEL], ['gemini-2.5-flash', R.gemini.DEFAULT_MODEL], ['gemini-3.5-flash', 'gemini-3.5-flash']]) {
+    global.localStorage.getItem = () => JSON.stringify({ key: 'k', model: saved });
+    assert.equal(R.gemini.config.model, expected);
+  }
+});
+
+test('without a personal key, Gemini goes through the server proxy', async (t) => {
+  const { fetch: origFetch } = global;
+  t.after(() => { global.fetch = origFetch; R.gemini.server = false; });
+  const calls = [];
+  global.fetch = async (url, init) => { calls.push({ url, body: JSON.parse(init.body) }); return { ok: true, json: async () => ({ text: '```json\n{"ok":true}\n```' }) }; };
+  await assert.rejects(R.gemini.generate('hi'), /no-key/);
+  R.gemini.server = true;
+  assert.equal(R.gemini.enabled, true);
+  assert.deepEqual(await R.gemini.generate('hi', { json: true }), { ok: true });
+  assert.equal(calls[0].url, '/api/ai/gemini');
+  assert.equal(calls[0].body.json, true);
+});

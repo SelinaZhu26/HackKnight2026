@@ -6,5 +6,8 @@ services:
     environment:
       # Tiger Cloud service URL (postgres://…?sslmode=require). Leave unset to run without cloud sync.
       DATABASE_URL: "${DATABASE_URL:-}"
+      # Server-held AI keys: visitors get Gemini and ElevenLabs voice without pasting their own. Leave unset to disable.
+      GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
+      ELEVENLABS_API_KEY: "${ELEVENLABS_API_KEY:-}"
     restart: unless-stopped
     init: true
