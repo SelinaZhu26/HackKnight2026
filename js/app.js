@@ -38,7 +38,24 @@
     });
     if (!S.squads) S.squads = DEFAULT_SQUADS;
     if (!S.feed) S.feed = seedFeed();
+    cloudSync();
   }
+
+  // ---------- Tiger Data sync (js/db.js) ----------
+  // Uploads purchases when the data set changes; the server ignores duplicates.
+  let syncT;
+  function cloudSync() {
+    clearTimeout(syncT);
+    syncT = setTimeout(async () => {
+      if (!R.db.on || !S.onboarded) return;
+      const txns = myTxns();
+      const key = `${R.db.userId}:${S.source}:${txns.length}`;
+      if (S.syncKey === key) return;
+      try { await R.db.syncTxns(displayName(), txns, S.source === 'csv' ? 'csv' : 'demo'); S.syncKey = key; save(); }
+      catch (e) { console.warn('cloud sync failed', e); }
+    }, 400);
+  }
+  const privacy = (local) => (R.db.on ? '🔒 saved to your private mochii club account on Tiger Cloud · turn off in ⚙️' : local);
   const myTxns = () => [...(S.source === 'csv' && S.csvTxns ? S.csvTxns : DATA.me), ...S.extraTxns];
   const displayName = () => S.name.trim().slice(0, 18) || 'You';
   const personById = (id) => PEOPLE.find((p) => p.person.id === id);
@@ -119,7 +136,7 @@
           <input class="input" id="nm" maxlength="18" placeholder="your name" value="${esc(S.name)}" autocomplete="given-name" enterkeyhint="next">
           <button class="btn dark block" id="obNext" ${S.name.trim() ? '' : 'disabled'}>continue →</button>
         </form>
-        <div class="fine">🔒 everything stays in your browser</div>
+        <div class="fine">${privacy('🔒 everything stays in your browser')}</div>
       </div>`;
       const nm = $('#nm', phone); const next = $('#obNext', phone);
       nm.addEventListener('input', () => { S.name = nm.value; save(); next.disabled = !nm.value.trim(); });
@@ -137,7 +154,7 @@
           <span class="em">${o.em}</span><span class="grow"><b>${o.title}${o.tag ? ` <i class="tag">${o.tag}</i>` : ''}</b><small>${o.sub}</small></span><span class="radio"></span>
         </button>`).join('')}</div>
       <button class="btn dark block" id="obGo">${SOURCES.find((o) => o.id === pick).cta} →</button>
-      <div class="fine">🔒 read-only · stays on your device · switch anytime</div>
+      <div class="fine">${privacy('🔒 read-only · stays on your device · switch anytime')}</div>
     </div>`;
     phone.querySelectorAll('[data-src]').forEach((b) => (b.onclick = () => {
       pick = b.dataset.src; S.welcomeSource = pick; save();
@@ -200,7 +217,7 @@
               <li>pick <b>CSV</b> and the last <b>3 months</b>. more months = spicier wrapped</li></ol>
             <button class="link" data-imp="download">download the sample CSV to see the format ⬇</button>
           </details>
-          <p class="imp-fine">🔒 parsed on your device. nothing gets uploaded, not even to us.</p>
+          <p class="imp-fine">${R.db.on ? '🔒 parsed on your device, then saved to your private account on Tiger Cloud (turn off in ⚙️).' : '🔒 parsed on your device. nothing gets uploaded, not even to us.'}</p>
         </div>`;
       const dz = $('#dz', el); const inp = $('#impFile', el);
       inp.onchange = () => inp.files[0] && readFile(inp.files[0]);
@@ -740,7 +757,7 @@
   // ---------- settings ----------
   function settingsSheet() {
     const g = R.gemini.config;
-    sheet(`<h3>settings</h3><p class="sub">everything is stored locally in this browser.</p>
+    sheet(`<h3>settings</h3><p class="sub">${R.db.on ? 'saved in this browser and synced to Tiger Cloud.' : 'everything is stored locally in this browser.'}</p>
       <div class="field"><label>display name</label><input class="input" id="stName" maxlength="18" value="${esc(S.name.trim().slice(0, 18))}" placeholder="You"></div>
       <div class="field"><label>monthly budget ($)</label><input class="input" id="stBudget" type="number" min="0.01" step="0.01" value="${S.budget}"></div>
       <div class="section-h" style="margin-top:8px"><h3>✨ Gemini</h3><small>${R.gemini.enabled ? 'connected' : 'off — using roast bot'}</small></div>
@@ -751,6 +768,10 @@
       <div class="field"><label>API key (elevenlabs.io → profile → API keys)</label><input class="input" id="stVoiceKey" type="password" value="${esc(R.voice.config.key || '')}" placeholder="sk_…"></div>
       <div class="field"><label>voice ID (optional)</label><input class="input" id="stVoiceId" value="${esc(R.voice.config.voiceId || '')}" placeholder="21m00Tcm4TlvDq8ikWAM"></div>
       <button class="btn sm ghost" id="stVoiceTest">🔊 test voice</button>
+      <div class="section-h" style="margin-top:8px"><h3>🐯 Tiger Data</h3><small>${R.db.available ? esc(R.db.engine) : 'not connected'}</small></div>
+      ${R.db.available ? `<label class="row tiger-toggle"><input type="checkbox" id="stCloud" ${R.db.enabled ? 'checked' : ''}><span>sync my purchases and lessons to Tiger Cloud</span></label>
+        <div id="stTiger" class="card tiger-card"><span class="spinner"></span> asking the database…</div>`
+        : '<p class="muted" style="font-size:13px;margin-bottom:8px">run the app through the backend with DATABASE_URL set to enable cloud sync.</p>'}
       <div class="section-h"><h3>data</h3><small>${S.source === 'csv' ? `CSV · ${S.csvTxns?.length || 0} txns` : 'demo bank'}</small></div>
       <div class="row" style="gap:8px;flex-wrap:wrap">
         <button class="btn sm ghost" id="stCsv">📄 import statement</button>
@@ -774,11 +795,27 @@
       };
       $('#stVoiceTest', sh).onclick = () => { saveVoice(sh); R.voice.speak(`hey ${displayName()}, compound interest is just interest earning interest. let's get your money right.`); };
       $('#stCsv', sh).onclick = () => { closeSheet(); openImporter(); };
+      const cloud = $('#stCloud', sh);
+      if (cloud) {
+        cloud.onchange = () => { R.db.enabled = cloud.checked; delete S.syncKey; save(); if (cloud.checked) cloudSync(); toast(cloud.checked ? 'cloud sync on ☁️' : 'cloud sync off'); };
+        tigerCard($('#stTiger', sh));
+      }
       const d = $('#stDemo', sh); if (d) d.onclick = () => { S.source = 'demo'; save(); recompute(); closeSheet(); route(); };
-      $('#stReset', sh).onclick = () => { if (confirm('reset all local data?')) { localStorage.removeItem(LS); localStorage.removeItem('receipts.learn'); location.hash = ''; location.reload(); } };
+      $('#stReset', sh).onclick = () => { if (confirm('reset all local data?')) { localStorage.removeItem(LS); localStorage.removeItem('receipts.learn'); localStorage.removeItem('receipts.uid'); location.hash = ''; location.reload(); } };
     });
   }
 
+  // Live numbers straight from the database (TimescaleDB time_bucket over the daily_spend continuous aggregate).
+  async function tigerCard(box) {
+    const [ins, st] = await Promise.all([R.db.insights(), R.db.stats()]);
+    if (!box.isConnected) return;
+    if (!ins || !st) { box.textContent = 'couldn’t reach the database right now.'; return; }
+    const max = Math.max(1, ...ins.weekly.map((w) => w.total));
+    box.innerHTML = `<div class="row" style="justify-content:space-between"><b>your weekly spend, from the db</b><small class="muted">${ins.engine === 'timescaledb' ? 'time_bucket · continuous aggregate' : 'postgres'}</small></div>
+      <div class="tiger-bars">${ins.weekly.map((w) => `<i style="height:${Math.max(4, (w.total / max) * 100)}%" title="${new Date(w.week).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: ${money(w.total, 0)}"></i>`).join('') || '<small class="muted">no purchases synced yet</small>'}</div>
+      <div class="tiger-stats"><span><b class="num">${ins.learning.lessons}</b>lessons</span><span><b class="num">${ins.learning.active_days}</b>active days</span><span><b class="num">${ins.learning.xp}</b>xp</span></div>
+      <small class="muted">whole club: ${st.users} members · ${st.transactions.toLocaleString()} purchases · ${st.learn_events} lesson events${st.hypertables.length ? ` · ${st.hypertables.map((h) => `${h.name} (${h.num_chunks} chunks)`).join(', ')}` : ''}</small>`;
+  }
   const saveVoice = (sh) => R.voice.save({ key: $('#stVoiceKey', sh).value.trim(), voiceId: $('#stVoiceId', sh).value.trim() || undefined });
 
   // ---------- wrapped players ----------
@@ -872,4 +909,6 @@
   // ---------- boot ----------
   recompute();
   route();
+  // Check for the backend after first paint; re-render the welcome copy and sync once we know.
+  R.db.init().then(() => { if (!R.db.available) return; if (!S.onboarded) route(); cloudSync(); });
 })();

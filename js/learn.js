@@ -621,6 +621,7 @@ Mix types. Return JSON {"exercises":[...]} where each item is ONE of:
         if (!prev) L.justUnlocked = R.LESSONS[R.LESSONS.findIndex((l) => l.id === cfg.lesson.id) + 1]?.id;
       }
       const streakUp = touchStreak(L);
+      R.db?.event(ctx.name(), { kind: cfg.practice ? 'practice' : cfg.testOut ? 'testout' : 'lesson', lesson: cfg.lesson?.id, xp, accuracy: sessionAcc });
       if (!L.day.chest && QUESTS.every((q) => q.val(L.day) >= q.goal())) { L.day.chest = true; L.freezes = Math.min(2, L.freezes + 1); setTimeout(() => ctx.toast('🎁 daily quests done · +1 streak freeze 🧊'), 600); }
       save();
 

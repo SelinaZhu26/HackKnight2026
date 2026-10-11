@@ -17,6 +17,8 @@ python3 -m http.server 5173
 
 (Or open `index.html` directly. A local server is only needed for share links to look right.)
 
+**🐯 Tiger Data:** purchases and lesson activity are stored in Tiger Cloud (TimescaleDB hypertables plus a continuous aggregate). Set `DATABASE_URL` and see [`TIGER.md`](TIGER.md) for setup, the API, and demo queries for judges.
+
 For a Next.js server, see [`backend/README.md`](backend/README.md). Run `npm ci`
 and `npm run dev` from `backend/`; it copies and serves the existing frontend
 without converting it to React. Production uses `npm run build` and `npm start`.
